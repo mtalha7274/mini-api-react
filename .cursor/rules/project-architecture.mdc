@@ -1,0 +1,33 @@
+---
+description: Mini API folder layout, phases, and import rules
+alwaysApply: true
+---
+
+# Mini API — Project Architecture
+
+Read `IDEA.md` before adding features or changing domain boundaries.
+
+## Folder layout
+
+- UI components live under `src/components/<domain>/` (`layout`, `shared`, `request`, `collections`, `environment`, `response`, `history`).
+- Pages compose the shell in `src/pages/` (e.g. `Home.jsx`).
+- Mock/seed data belongs in `src/data/`.
+- Global state (Phase 2+) belongs in `src/context/<Name>/` — not in components.
+- Side effects and parsing belong in `src/utils/` (`requestExecutor.js`, `envParser.js`).
+
+## Phase rules
+
+- **Phase 1 (UI):** Presentational components receive props; use local `useState` only for UI (tabs, expand/collapse). No `fetch` in components.
+- **Phase 2 (partial):** `CollectionContext` + reducer for collection/request CRUD; `RequestContext` / `HistoryContext` still planned.
+- **Collections:** Mutate only via `dispatch` in `src/context/CollectionContext/` — never edit `collections` arrays in components.
+- **Phase 3+:** Execute requests only via `src/utils/requestExecutor.js`.
+
+## Imports
+
+- Prefer barrel imports: `from '../components/request'` not deep leaf paths unless same folder.
+- Do not put request/collection/history business logic in `App.js`.
+
+## Styling
+
+- Use Tailwind utility classes in components.
+- Reuse `KeyValueEditor` from `components/shared` for all key-value UIs.
