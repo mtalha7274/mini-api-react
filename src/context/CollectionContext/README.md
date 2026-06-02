@@ -32,6 +32,7 @@ Legacy entries without `headers` / `params` / `body` are normalized on load via 
 | `ADD_REQUEST_TO_COLLECTION` | `{ collectionId, request }` |
 | `RENAME_REQUEST` | `{ collectionId, requestId, name }` |
 | `DELETE_REQUEST` | `{ collectionId, requestId }` |
+| `DUPLICATE_REQUEST` | `{ collectionId, sourceRequestId, request }` — inserts copy below source |
 | `SYNC_REQUEST_EDITOR` | `{ requestId, method, url, headers, params, body }` |
 | `SET_COLLECTION_ENVIRONMENT` | `{ collectionId, environmentId }` (`null` detaches) |
 | `CLEAR_ENVIRONMENT_REFERENCES` | `{ environmentId }` |
@@ -40,6 +41,6 @@ Collections include optional `environmentId` linking to `EnvironmentContext`.
 
 ## UI
 
-Sidebar collections panel: **+ Collection**, **+ Request**, inline rename (double-click or pencil), delete with confirm.
+Sidebar collections panel: **+ Collection**, **+ Request**, inline rename (double-click or pencil), duplicate (copy icon), delete with confirm.
 
 Mutations should go through `dispatch` only — not by editing `collections` in components.

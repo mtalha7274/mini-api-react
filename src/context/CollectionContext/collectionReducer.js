@@ -8,6 +8,7 @@ export const CollectionActionTypes = {
   ADD_REQUEST_TO_COLLECTION: 'ADD_REQUEST_TO_COLLECTION',
   RENAME_REQUEST: 'RENAME_REQUEST',
   DELETE_REQUEST: 'DELETE_REQUEST',
+  DUPLICATE_REQUEST: 'DUPLICATE_REQUEST',
   SYNC_REQUEST_EDITOR: 'SYNC_REQUEST_EDITOR',
   SET_COLLECTION_ENVIRONMENT: 'SET_COLLECTION_ENVIRONMENT',
   CLEAR_ENVIRONMENT_REFERENCES: 'CLEAR_ENVIRONMENT_REFERENCES',
@@ -22,6 +23,23 @@ function createEmptyRequest(id) {
     headers: [createEmptyKeyValue()],
     params: [createEmptyKeyValue()],
     body: '',
+  };
+}
+
+/**
+ * @param {{ id: string, name: string, method: string, url: string, headers: object[], params: object[], body: string }} source
+ */
+function cloneRequestFrom(source) {
+  const id = generateId('req');
+  const baseName = source.name.trim() || 'Request';
+  return {
+    id,
+    name: `${baseName} (copy)`,
+    method: source.method,
+    url: source.url,
+    headers: cloneKeyValueRows(source.headers),
+    params: cloneKeyValueRows(source.params),
+    body: source.body ?? '',
   };
 }
 
@@ -77,6 +95,21 @@ export function deleteRequest(collectionId, requestId) {
   return {
     type: CollectionActionTypes.DELETE_REQUEST,
     payload: { collectionId, requestId },
+  };
+}
+
+/**
+ * @param {string} collectionId
+ * @param {{ id: string, name: string, method: string, url: string, headers: object[], params: object[], body: string }} sourceRequest
+ */
+export function duplicateRequest(collectionId, sourceRequest) {
+  return {
+    type: CollectionActionTypes.DUPLICATE_REQUEST,
+    payload: {
+      collectionId,
+      sourceRequestId: sourceRequest.id,
+      request: cloneRequestFrom(sourceRequest),
+    },
   };
 }
 
@@ -182,6 +215,21 @@ export function collectionReducer(state, action) {
               }
             : col
         ),
+      };
+    }
+
+    case CollectionActionTypes.DUPLICATE_REQUEST: {
+      const { collectionId, sourceRequestId, request } = action.payload;
+      return {
+        ...state,
+        collections: state.collections.map((col) => {
+          if (col.id !== collectionId) return col;
+          const index = col.requests.findIndex((r) => r.id === sourceRequestId);
+          if (index === -1) return col;
+          const requests = [...col.requests];
+          requests.splice(index + 1, 0, request);
+          return { ...col, requests };
+        }),
       };
     }
 

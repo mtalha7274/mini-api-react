@@ -54,6 +54,7 @@ export default function InlineRename({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
+          e.stopPropagation();
           if (e.key === 'Enter') {
             e.preventDefault();
             commit();

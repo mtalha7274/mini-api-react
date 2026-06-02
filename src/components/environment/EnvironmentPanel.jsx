@@ -25,10 +25,14 @@ export default function EnvironmentPanel({
   }
 
   return (
-    <div className="border-b border-border bg-surface px-3 py-3 shadow-card sm:px-4">
+    <div className="border-b border-border border-l-4 border-l-env bg-surface px-3 py-3 shadow-card sm:px-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="min-w-0 truncate text-sm font-medium text-foreground">
-          {resolvedEnvironment.name}
+          <span className="text-muted">Environment</span>
+          <span className="mx-1.5 text-muted" aria-hidden>
+            ·
+          </span>
+          <span className="font-semibold text-env">{resolvedEnvironment.name}</span>
         </p>
         {canEdit && (
           <button

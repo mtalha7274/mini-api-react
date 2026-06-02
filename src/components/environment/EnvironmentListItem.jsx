@@ -19,7 +19,9 @@ export default function EnvironmentListItem({
   return (
     <div
       className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 transition-colors ${
-        isSelected ? 'bg-accent/15' : 'hover:bg-surfaceMuted'
+        isSelected
+          ? 'border border-env-border bg-env-muted'
+          : 'border border-transparent hover:bg-surfaceMuted'
       }`}
     >
       <div
@@ -27,6 +29,7 @@ export default function EnvironmentListItem({
         tabIndex={0}
         onClick={onSelect}
         onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             onSelect();
@@ -38,7 +41,7 @@ export default function EnvironmentListItem({
           value={environment.name}
           onCommit={onRename}
           className={`text-sm font-medium ${
-            isSelected ? 'text-accent' : 'text-foreground'
+            isSelected ? 'text-env' : 'text-foreground'
           }`}
         />
       </div>

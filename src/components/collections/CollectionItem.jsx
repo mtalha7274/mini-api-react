@@ -16,6 +16,7 @@ import RequestItem from './RequestItem';
  * @param {(environmentId: string | null) => void} props.onSetEnvironment
  * @param {() => void} props.onAddRequest
  * @param {(requestId: string, name: string) => void} props.onRenameRequest
+ * @param {(requestId: string) => void} props.onDuplicateRequest
  * @param {(requestId: string) => void} props.onDeleteRequest
  */
 export default function CollectionItem({
@@ -30,6 +31,7 @@ export default function CollectionItem({
   onSetEnvironment,
   onAddRequest,
   onRenameRequest,
+  onDuplicateRequest,
   onDeleteRequest,
 }) {
   const hasActiveRequest = collection.requests.some(
@@ -56,15 +58,15 @@ export default function CollectionItem({
         <InlineRename
           value={collection.name}
           onCommit={onRename}
-          className={`text-sm font-medium ${
+          className={`min-w-0 flex-1 text-sm font-medium ${
             hasActiveRequest ? 'text-accent' : 'text-foreground'
           }`}
         />
-        <span className="shrink-0 px-1 text-xs text-muted">
+        <span className="shrink-0 text-xs text-muted tabular-nums">
           {collection.requests.length}
         </span>
         <span
-          className="relative shrink-0"
+          className="relative min-w-0 shrink"
           onClick={(e) => e.stopPropagation()}
         >
           <select
@@ -73,7 +75,17 @@ export default function CollectionItem({
             onChange={(e) =>
               onSetEnvironment(e.target.value === '' ? null : e.target.value)
             }
-            className="select-control-env max-w-[7rem] appearance-none rounded border border-border bg-input py-0.5 pl-1.5 pr-5 text-xs text-foreground focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-w-[6.5rem]"
+            className={`select-control-env-compact w-full min-w-0 appearance-none rounded border bg-input py-0.5 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              collection.environmentId
+                ? 'border-env-border text-foreground focus:border-env'
+                : 'border-border text-muted focus:border-env'
+            }`}
+            title={
+              collection.environmentId
+                ? environments.find((e) => e.id === collection.environmentId)
+                    ?.name
+                : 'No environment'
+            }
           >
             <option value="">None</option>
             {environments.map((env) => (
@@ -82,7 +94,7 @@ export default function CollectionItem({
               </option>
             ))}
           </select>
-          <SelectChevron />
+          <SelectChevron size="compact" />
         </span>
         <span onClick={(e) => e.stopPropagation()}>
           <IconButton
@@ -104,6 +116,7 @@ export default function CollectionItem({
               isActive={activeRequestId === request.id}
               onSelect={() => onSelectRequest(request.id)}
               onRename={(name) => onRenameRequest(request.id, name)}
+              onDuplicate={() => onDuplicateRequest(request.id)}
               onDelete={() => onDeleteRequest(request.id)}
             />
           ))}

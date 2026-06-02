@@ -9,6 +9,7 @@ import {
   addRequestToCollection,
   renameRequest,
   deleteRequest,
+  duplicateRequest,
   syncRequestEditor,
   setCollectionEnvironment,
   clearEnvironmentReferences,
@@ -29,6 +30,10 @@ import {
   createEmptyKeyValue,
 } from '../data/mockData';
 import { canSendRequest } from '../lib/http/canSendRequest';
+import {
+  bodyRequiresJsonValidation,
+  getJsonValidationError,
+} from '../utils/jsonValidation';
 import { variablesArrayToMap } from '../utils/envParser';
 import { executeRequest } from '../utils/requestExecutor';
 
@@ -205,6 +210,23 @@ export default function Home() {
     [collectionDispatch]
   );
 
+  const handleDuplicateRequest = useCallback(
+    (collectionId, requestId) => {
+      const col = collections.find((c) => c.id === collectionId);
+      const source = col?.requests.find((r) => r.id === requestId);
+      if (!source) return;
+
+      const action = duplicateRequest(collectionId, source);
+      collectionDispatch(action);
+      const { request: copy } = action.payload;
+      setExpandedIds((prev) => ({ ...prev, [collectionId]: true }));
+      setActiveRequestId(copy.id);
+      setRequest(loadRequestIntoEditor(copy));
+      setSidebarTab('collections');
+    },
+    [collections, collectionDispatch]
+  );
+
   const handleDeleteRequest = useCallback(
     (collectionId, requestId) => {
       const col = collections.find((c) => c.id === collectionId);
@@ -285,7 +307,14 @@ export default function Home() {
   );
 
   const handleSend = useCallback(async () => {
-    if (!canSendRequest(request) || isSending) return;
+    if (isSending) return;
+    if (
+      bodyRequiresJsonValidation(request.method, request.body) &&
+      getJsonValidationError(request.body)
+    ) {
+      return;
+    }
+    if (!canSendRequest(request)) return;
 
     setIsSending(true);
     try {
@@ -352,6 +381,7 @@ export default function Home() {
         onSetCollectionEnvironment: handleSetCollectionEnvironment,
         onAddRequest: handleAddRequest,
         onRenameRequest: handleRenameRequest,
+        onDuplicateRequest: handleDuplicateRequest,
         onDeleteRequest: handleDeleteRequest,
       },
       environmentsProps: {
@@ -378,6 +408,7 @@ export default function Home() {
       handleSetCollectionEnvironment,
       handleAddRequest,
       handleRenameRequest,
+      handleDuplicateRequest,
       handleDeleteRequest,
       selectedEnvironmentId,
       handleCreateEnvironment,

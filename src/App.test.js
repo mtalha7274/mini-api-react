@@ -153,7 +153,8 @@ test('can open Environments tab and see seeded environment', () => {
     screen.getByRole('button', { name: /\+ environment/i })
   ).toBeInTheDocument();
   fireEvent.click(screen.getByText('Development'));
-  expect(screen.getByText('Variables — Development')).toBeInTheDocument();
+  expect(screen.getByText('Variables')).toBeInTheDocument();
+  expect(screen.getByText(/— Development/)).toBeInTheDocument();
 });
 
 test('shows environment name in top bar when request uses attached env', () => {

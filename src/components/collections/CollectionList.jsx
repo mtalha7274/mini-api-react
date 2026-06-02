@@ -14,6 +14,7 @@ import CollectionItem from './CollectionItem';
  * @param {(collectionId: string, environmentId: string | null) => void} props.onSetCollectionEnvironment
  * @param {(collectionId: string) => void} props.onAddRequest
  * @param {(collectionId: string, requestId: string, name: string) => void} props.onRenameRequest
+ * @param {(collectionId: string, requestId: string) => void} props.onDuplicateRequest
  * @param {(collectionId: string, requestId: string) => void} props.onDeleteRequest
  */
 export default function CollectionList({
@@ -29,6 +30,7 @@ export default function CollectionList({
   onSetCollectionEnvironment,
   onAddRequest,
   onRenameRequest,
+  onDuplicateRequest,
   onDeleteRequest,
 }) {
   return (
@@ -65,6 +67,9 @@ export default function CollectionList({
               onAddRequest={() => onAddRequest(collection.id)}
               onRenameRequest={(requestId, name) =>
                 onRenameRequest(collection.id, requestId, name)
+              }
+              onDuplicateRequest={(requestId) =>
+                onDuplicateRequest(collection.id, requestId)
               }
               onDeleteRequest={(requestId) =>
                 onDeleteRequest(collection.id, requestId)

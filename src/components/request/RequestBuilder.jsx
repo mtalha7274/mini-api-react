@@ -1,5 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { canSendRequest } from '../../lib/http/canSendRequest';
+import {
+  bodyRequiresJsonValidation,
+  getJsonValidationError,
+} from '../../utils/jsonValidation';
 import { Tabs } from '../shared';
 import MethodSelector from './MethodSelector';
 import UrlInput from './UrlInput';
@@ -13,16 +17,6 @@ const REQUEST_TABS = [
   { id: 'headers', label: 'Headers' },
   { id: 'body', label: 'Body' },
 ];
-
-function validateJson(body) {
-  if (!body.trim()) return null;
-  try {
-    JSON.parse(body);
-    return null;
-  } catch {
-    return 'Invalid JSON';
-  }
-}
 
 /**
  * @param {object} props
@@ -50,14 +44,34 @@ export default function RequestBuilder({
   tabsEndRef,
 }) {
   const [activeTab, setActiveTab] = useState('params');
-  const bodyError = useMemo(
-    () => (activeTab === 'body' ? validateJson(body) : null),
-    [activeTab, body]
-  );
+
+  const bodyJsonError = useMemo(() => {
+    if (!bodyRequiresJsonValidation(method, body)) return null;
+    return getJsonValidationError(body);
+  }, [method, body]);
+
   const sendEnabled = useMemo(
     () => canSendRequest({ method, url, body }),
     [method, url, body]
   );
+
+  const tabs = useMemo(
+    () =>
+      REQUEST_TABS.map((tab) =>
+        tab.id === 'body' && bodyJsonError
+          ? { ...tab, label: 'Body', hasError: true }
+          : tab
+      ),
+    [bodyJsonError]
+  );
+
+  const handleSend = useCallback(() => {
+    if (bodyJsonError) {
+      setActiveTab('body');
+      return;
+    }
+    onSend?.();
+  }, [bodyJsonError, onSend]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -75,7 +89,7 @@ export default function RequestBuilder({
             />
           </div>
           <SendButton
-            onClick={onSend}
+            onClick={handleSend}
             disabled={!sendEnabled}
             loading={isSending}
             className="w-full shrink-0 sm:w-auto"
@@ -84,7 +98,7 @@ export default function RequestBuilder({
       </div>
 
       <div ref={tabsEndRef} className="shrink-0">
-        <Tabs tabs={REQUEST_TABS} activeTab={activeTab} onChange={setActiveTab} />
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto bg-background p-3 sm:p-4">
@@ -104,7 +118,7 @@ export default function RequestBuilder({
           <BodyEditor
             body={body}
             onChange={(value) => onChange('body', value)}
-            error={bodyError}
+            error={bodyJsonError}
           />
         )}
       </div>

@@ -53,8 +53,9 @@ export default function EnvironmentList({
       </div>
       {selectedEnv && (
         <div className="border-t border-border p-3">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted">
-            Variables — {selectedEnv.name}
+          <p className="mb-3 truncate text-xs font-medium text-muted">
+            <span className="uppercase tracking-wide">Variables</span>
+            <span className="text-env"> — {selectedEnv.name}</span>
           </p>
           <VariablesEditor
             variables={selectedEnv.variables}
