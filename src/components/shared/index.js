@@ -4,4 +4,5 @@ export { default as Tabs } from './Tabs';
 export { default as IconButton } from './IconButton';
 export { default as ThemeToggle } from './ThemeToggle';
 export { default as InlineRename } from './InlineRename';
+export { default as AuthFields } from './AuthFields';
 export { default as SelectChevron } from './SelectChevron';

@@ -11,6 +11,7 @@ import {
   deleteRequest,
   duplicateRequest,
   syncRequestEditor,
+  setCollectionAuth,
   setCollectionEnvironment,
   clearEnvironmentReferences,
   findRequestInCollections,
@@ -35,6 +36,7 @@ import {
   getJsonValidationError,
 } from '../utils/jsonValidation';
 import { variablesArrayToMap } from '../utils/envParser';
+import { DEFAULT_REQUEST_AUTH, normalizeAuth } from '../utils/auth';
 import { executeRequest } from '../utils/requestExecutor';
 
 const emptyEditorState = {
@@ -43,6 +45,7 @@ const emptyEditorState = {
   headers: [createEmptyKeyValue()],
   params: [createEmptyKeyValue()],
   body: '',
+  auth: { ...DEFAULT_REQUEST_AUTH },
 };
 
 function loadRequestIntoEditor(ref) {
@@ -53,6 +56,7 @@ function loadRequestIntoEditor(ref) {
     headers: cloneKeyValueRows(ref.headers),
     params: cloneKeyValueRows(ref.params),
     body: ref.body ?? '',
+    auth: normalizeAuth(ref.auth, 'request'),
   };
 }
 
@@ -68,6 +72,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('collections');
   const [expandedIds, setExpandedIds] = useState({});
+  const [activeCollectionId, setActiveCollectionId] = useState(null);
   const [activeRequestId, setActiveRequestId] = useState(null);
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState(null);
 
@@ -78,16 +83,24 @@ export default function Home() {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
 
+  const activeCollection = useMemo(() => {
+    if (!activeCollectionId) return null;
+    return collections.find((col) => col.id === activeCollectionId) ?? null;
+  }, [collections, activeCollectionId]);
+
   const activeCollectionContext = useMemo(() => {
     if (!activeRequestId) return null;
     return findRequestInCollections(collections, activeRequestId);
   }, [collections, activeRequestId]);
 
   const resolvedEnvironment = useMemo(() => {
-    const envId = activeCollectionContext?.collection.environmentId;
+    const envId =
+      activeCollectionContext?.collection.environmentId ??
+      activeCollection?.environmentId ??
+      null;
     if (!envId) return null;
     return environments.find((e) => e.id === envId) ?? null;
-  }, [environments, activeCollectionContext]);
+  }, [environments, activeCollectionContext, activeCollection]);
 
   const envVariableMap = useMemo(
     () => variablesArrayToMap(resolvedEnvironment?.variables ?? []),
@@ -96,11 +109,22 @@ export default function Home() {
 
   const selectRequestById = useCallback((requestId, cols) => {
     setActiveRequestId(requestId);
+    setActiveCollectionId(null);
     const found = findRequestInCollections(cols, requestId);
     if (found) {
       setRequest(loadRequestIntoEditor(found.request));
     }
   }, []);
+
+  const handleSelectCollection = useCallback(
+    (collectionId) => {
+      setActiveCollectionId(collectionId);
+      setActiveRequestId(null);
+      setExpandedIds((prev) => ({ ...prev, [collectionId]: true }));
+      closeSidebar();
+    },
+    [closeSidebar]
+  );
 
   const handleRequestFieldChange = useCallback(
     (field, value) => {
@@ -135,6 +159,8 @@ export default function Home() {
     collectionDispatch(action);
     const { id } = action.payload;
     setExpandedIds((prev) => ({ ...prev, [id]: true }));
+    setActiveCollectionId(id);
+    setActiveRequestId(null);
     setSidebarTab('collections');
   }, [collectionDispatch]);
 
@@ -167,6 +193,9 @@ export default function Home() {
         delete next[collectionId];
         return next;
       });
+      if (activeCollectionId === collectionId) {
+        setActiveCollectionId(null);
+      }
       if (
         activeRequestId &&
         col.requests.some((r) => r.id === activeRequestId)
@@ -180,7 +209,7 @@ export default function Home() {
         }
       }
     },
-    [collections, collectionDispatch, activeRequestId, selectRequestById]
+    [collections, collectionDispatch, activeRequestId, activeCollectionId, selectRequestById]
   );
 
   const handleSetCollectionEnvironment = useCallback(
@@ -196,6 +225,7 @@ export default function Home() {
       collectionDispatch(action);
       const { request: newReq } = action.payload;
       setExpandedIds((prev) => ({ ...prev, [collectionId]: true }));
+      setActiveCollectionId(null);
       setActiveRequestId(newReq.id);
       setRequest(loadRequestIntoEditor(newReq));
       setSidebarTab('collections');
@@ -306,6 +336,22 @@ export default function Home() {
     ]
   );
 
+  const handleCollectionAuthChange = useCallback(
+    (auth) => {
+      const collectionId =
+        activeCollectionId ?? activeCollectionContext?.collection.id;
+      if (!collectionId) return;
+      collectionDispatch(setCollectionAuth(collectionId, auth));
+    },
+    [activeCollectionId, activeCollectionContext, collectionDispatch]
+  );
+
+  const mainView = useMemo(() => {
+    if (activeRequestId) return 'request';
+    if (activeCollectionId && activeCollection) return 'collection';
+    return 'empty';
+  }, [activeRequestId, activeCollectionId, activeCollection]);
+
   const handleSend = useCallback(async () => {
     if (isSending) return;
     if (
@@ -324,13 +370,15 @@ export default function Home() {
         headers: request.headers,
         params: request.params,
         body: request.body,
+        collectionAuth: activeCollectionContext?.collection.auth,
+        requestAuth: request.auth,
         envVariableMap,
       });
       setResponse(result);
     } finally {
       setIsSending(false);
     }
-  }, [request, envVariableMap, isSending]);
+  }, [request, envVariableMap, isSending, activeCollectionContext]);
 
   const handleVariablesChange = useCallback(
     (environmentId, variables) => {
@@ -356,13 +404,39 @@ export default function Home() {
       headers: request.headers,
       params: request.params,
       body: request.body,
+      collectionAuth: activeCollectionContext?.collection.auth ?? null,
+      requestAuth: request.auth,
       envVariableMap,
       onChange: handleRequestFieldChange,
       onSend: handleSend,
       isSending,
     }),
-    [request, envVariableMap, handleRequestFieldChange, handleSend, isSending]
+    [
+      request,
+      envVariableMap,
+      activeCollectionContext,
+      handleRequestFieldChange,
+      handleSend,
+      isSending,
+    ]
   );
+
+  const collectionDetailProps = useMemo(() => {
+    if (!activeCollection) return null;
+    const environmentName = activeCollection.environmentId
+      ? environments.find((e) => e.id === activeCollection.environmentId)
+          ?.name ?? null
+      : null;
+    return {
+      collection: activeCollection,
+      environmentName,
+      onAuthChange: handleCollectionAuthChange,
+    };
+  }, [
+    activeCollection,
+    environments,
+    handleCollectionAuthChange,
+  ]);
 
   const sidebarProps = useMemo(
     () => ({
@@ -372,9 +446,11 @@ export default function Home() {
         collections,
         environments,
         expandedIds,
+        activeCollectionId,
         activeRequestId,
         onCreateCollection: handleCreateCollection,
         onToggleCollection: handleToggleCollection,
+        onSelectCollection: handleSelectCollection,
         onSelectRequest: handleSelectRequest,
         onRenameCollection: handleRenameCollection,
         onDeleteCollection: handleDeleteCollection,
@@ -399,9 +475,11 @@ export default function Home() {
       collections,
       environments,
       expandedIds,
+      activeCollectionId,
       activeRequestId,
       handleCreateCollection,
       handleToggleCollection,
+      handleSelectCollection,
       handleSelectRequest,
       handleRenameCollection,
       handleDeleteCollection,
@@ -425,6 +503,8 @@ export default function Home() {
       onCloseSidebar={closeSidebar}
       sidebarProps={sidebarProps}
       environmentProps={environmentProps}
+      mainView={mainView}
+      collectionDetailProps={collectionDetailProps}
       requestProps={requestProps}
       response={response}
     />

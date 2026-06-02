@@ -5,9 +5,11 @@ import CollectionItem from './CollectionItem';
  * @param {Array<{ id: string, name: string, environmentId: string | null, requests: object[] }>} props.collections
  * @param {Array<{ id: string, name: string }>} props.environments
  * @param {Record<string, boolean>} props.expandedIds
+ * @param {string | null} props.activeCollectionId
  * @param {string | null} props.activeRequestId
  * @param {() => void} props.onCreateCollection
  * @param {(collectionId: string) => void} props.onToggleCollection
+ * @param {(collectionId: string) => void} props.onSelectCollection
  * @param {(requestId: string) => void} props.onSelectRequest
  * @param {(collectionId: string, name: string) => void} props.onRenameCollection
  * @param {(collectionId: string) => void} props.onDeleteCollection
@@ -21,9 +23,11 @@ export default function CollectionList({
   collections,
   environments,
   expandedIds,
+  activeCollectionId,
   activeRequestId,
   onCreateCollection,
   onToggleCollection,
+  onSelectCollection,
   onSelectRequest,
   onRenameCollection,
   onDeleteCollection,
@@ -56,8 +60,10 @@ export default function CollectionList({
               collection={collection}
               environments={environments}
               isExpanded={!!expandedIds[collection.id]}
+              activeCollectionId={activeCollectionId}
               activeRequestId={activeRequestId}
               onToggle={() => onToggleCollection(collection.id)}
+              onSelectCollection={() => onSelectCollection(collection.id)}
               onSelectRequest={onSelectRequest}
               onRename={(name) => onRenameCollection(collection.id, name)}
               onDelete={() => onDeleteCollection(collection.id)}

@@ -12,6 +12,8 @@
  * @property {KeyValueRow[]} params
  * @property {string} [body]
  * @property {Record<string, string>} envVariableMap
+ * @property {import('../../utils/auth').CollectionAuth} [collectionAuth]
+ * @property {import('../../utils/auth').RequestAuth} [requestAuth]
  */
 
 /**

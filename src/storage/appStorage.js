@@ -2,6 +2,7 @@ import {
   createEmptyKeyValue,
   cloneKeyValueRows,
 } from '../data/mockData';
+import { normalizeAuth } from '../utils/auth';
 
 const COLLECTIONS_KEY = 'mini-api-collections';
 const ENVIRONMENTS_KEY = 'mini-api-environments';
@@ -20,6 +21,7 @@ export function normalizeRequest(req) {
       headers: [createEmptyKeyValue()],
       params: [createEmptyKeyValue()],
       body: '',
+      auth: normalizeAuth(null, 'request'),
     };
   }
 
@@ -46,6 +48,7 @@ export function normalizeRequest(req) {
         )
       : [createEmptyKeyValue()],
     body: typeof r.body === 'string' ? r.body : '',
+    auth: normalizeAuth(r.auth, 'request'),
   };
 }
 
@@ -88,6 +91,7 @@ function normalizeCollection(col) {
     id: c.id,
     name: c.name,
     environmentId,
+    auth: normalizeAuth(c.auth, 'collection'),
     requests,
   };
 }

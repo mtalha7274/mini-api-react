@@ -12,7 +12,9 @@ import { useSidebarResize } from './useSidebarResize';
  * @param {() => void} props.onCloseSidebar
  * @param {object} props.sidebarProps
  * @param {object} props.environmentProps
- * @param {object} props.requestProps
+ * @param {'collection' | 'request' | 'empty'} props.mainView
+ * @param {object} [props.collectionDetailProps]
+ * @param {object} [props.requestProps]
  * @param {object} props.response
  */
 export default function AppShell({
@@ -21,6 +23,8 @@ export default function AppShell({
   onCloseSidebar,
   sidebarProps,
   environmentProps,
+  mainView,
+  collectionDetailProps,
   requestProps,
   response,
 }) {
@@ -62,7 +66,9 @@ export default function AppShell({
         />
 
         <MainColumn
+          mainView={mainView}
           environmentProps={environmentProps}
+          collectionDetailProps={collectionDetailProps}
           requestProps={requestProps}
           response={response}
         />

@@ -18,9 +18,11 @@ Wrap the app with `CollectionProvider` (see `src/index.js`).
 
 Each request in the tree stores the full editor state:
 
-`{ id, name, method, url, headers: KeyValueRow[], params: KeyValueRow[], body: string }`
+`{ id, name, method, url, headers: KeyValueRow[], params: KeyValueRow[], body: string, auth: RequestAuth }`
 
-Legacy entries without `headers` / `params` / `body` are normalized on load via `src/storage/appStorage.js`.
+Each collection includes optional `environmentId` and `auth: { type: 'none' | 'bearer', token: string }`.
+
+Legacy entries without `headers` / `params` / `body` / `auth` are normalized on load via `src/storage/appStorage.js`.
 
 ## Actions
 
@@ -33,7 +35,8 @@ Legacy entries without `headers` / `params` / `body` are normalized on load via 
 | `RENAME_REQUEST` | `{ collectionId, requestId, name }` |
 | `DELETE_REQUEST` | `{ collectionId, requestId }` |
 | `DUPLICATE_REQUEST` | `{ collectionId, sourceRequestId, request }` — inserts copy below source |
-| `SYNC_REQUEST_EDITOR` | `{ requestId, method, url, headers, params, body }` |
+| `SYNC_REQUEST_EDITOR` | `{ requestId, method, url, headers, params, body, auth }` |
+| `SET_COLLECTION_AUTH` | `{ collectionId, auth }` — `{ type: 'none' \| 'bearer', token }` |
 | `SET_COLLECTION_ENVIRONMENT` | `{ collectionId, environmentId }` (`null` detaches) |
 | `CLEAR_ENVIRONMENT_REFERENCES` | `{ environmentId }` |
 

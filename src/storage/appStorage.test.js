@@ -35,7 +35,15 @@ test('saveCollections and loadCollections round-trip', () => {
   ];
 
   saveCollections(collections);
-  expect(loadCollections()).toEqual({ collections });
+  const loaded = loadCollections();
+  expect(loaded.collections[0].auth).toEqual({ type: 'none', token: '' });
+  expect(loaded.collections[0].requests[0].auth).toEqual({
+    mode: 'inherit',
+    type: 'none',
+    token: '',
+  });
+  expect(loaded.collections[0].id).toBe('col-1');
+  expect(loaded.collections[0].requests[0].url).toBe('http://test.com');
 });
 
 test('normalizeRequest fills missing editor fields', () => {
@@ -49,6 +57,11 @@ test('normalizeRequest fills missing editor fields', () => {
   expect(req.headers).toHaveLength(1);
   expect(req.params).toHaveLength(1);
   expect(req.body).toBe('');
+  expect(req.auth).toEqual({
+    mode: 'inherit',
+    type: 'none',
+    token: '',
+  });
 });
 
 test('loadEnvironments returns empty when nothing stored', () => {

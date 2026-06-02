@@ -1,4 +1,5 @@
 import { resolveEnvVariables } from '../../utils/envParser';
+import { resolveEffectiveAuth } from '../../utils/auth';
 
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH']);
 
@@ -20,6 +21,38 @@ export function buildHeaders(rows, envVariableMap) {
     headers[key] = resolveEnvVariables(row.value, envVariableMap);
   }
   return headers;
+}
+
+/**
+ * @param {Record<string, string>} headers
+ * @param {import('../../utils/auth').CollectionAuth | undefined | null} collectionAuth
+ * @param {import('../../utils/auth').RequestAuth | undefined | null} requestAuth
+ * @param {Record<string, string>} envVariableMap
+ */
+export function mergeAuthHeaders(
+  headers,
+  collectionAuth,
+  requestAuth,
+  envVariableMap
+) {
+  const effective = resolveEffectiveAuth(collectionAuth, requestAuth);
+  if (effective.type !== 'bearer') {
+    return headers;
+  }
+
+  const token = resolveEnvVariables(effective.token, envVariableMap).trim();
+  if (!token) {
+    return headers;
+  }
+
+  const next = { ...headers };
+  for (const key of Object.keys(next)) {
+    if (key.toLowerCase() === 'authorization') {
+      delete next[key];
+    }
+  }
+  next.Authorization = `Bearer ${token}`;
+  return next;
 }
 
 /**
@@ -55,9 +88,23 @@ export function mergeQueryParams(url, params, envVariableMap) {
  * @returns {import('./types').BuiltRequest}
  */
 export function buildRequest(config) {
-  const { method, url, headers, params, body, envVariableMap } = config;
+  const {
+    method,
+    url,
+    headers,
+    params,
+    body,
+    envVariableMap,
+    collectionAuth,
+    requestAuth,
+  } = config;
   const resolvedUrl = mergeQueryParams(url, params, envVariableMap);
-  const builtHeaders = buildHeaders(headers, envVariableMap);
+  const builtHeaders = mergeAuthHeaders(
+    buildHeaders(headers, envVariableMap),
+    collectionAuth,
+    requestAuth,
+    envVariableMap
+  );
 
   let builtBody;
   if (METHODS_WITH_BODY.has(method)) {

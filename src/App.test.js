@@ -47,6 +47,11 @@ function openSidebar() {
   fireEvent.click(screen.getByRole('button', { name: /open sidebar/i }));
 }
 
+function selectCollectionByName(collectionName) {
+  openSidebar();
+  fireEvent.click(screen.getByText(collectionName));
+}
+
 function expandCollectionByName(collectionName) {
   openSidebar();
   const nameEl = screen.getByText(collectionName);
@@ -66,10 +71,12 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-test('renders Mini API shell with Send button', () => {
+test('renders Mini API shell with empty main state', () => {
   renderApp();
   expect(screen.getAllByText('Mini API').length).toBeGreaterThan(0);
-  expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
+  expect(
+    screen.getByText(/select a collection or request/i)
+  ).toBeInTheDocument();
 });
 
 test('renders theme toggle', () => {
@@ -86,8 +93,10 @@ test('renders open sidebar control', () => {
   ).toBeInTheDocument();
 });
 
-test('renders response panel resize handle', () => {
+test('renders response panel resize handle when a request is selected', () => {
+  seedMockAppData();
   renderApp();
+  selectRequestByName('List users');
   expect(
     screen.getByRole('separator', { name: /resize response panel/i })
   ).toBeInTheDocument();
@@ -114,11 +123,12 @@ test('renders add collection control', () => {
   ).toBeInTheDocument();
 });
 
-test('can add a new collection', () => {
+test('can add a new collection and open collection detail view', () => {
   renderApp();
   openSidebar();
   fireEvent.click(screen.getByRole('button', { name: /\+ collection/i }));
-  expect(screen.getByText('New Collection')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
+  expect(screen.getByText(/export as json/i)).toBeInTheDocument();
 });
 
 test('open sidebar sets aria-expanded on menu button', () => {
@@ -157,6 +167,17 @@ test('can open Environments tab and see seeded environment', () => {
   expect(screen.getByText(/— Development/)).toBeInTheDocument();
 });
 
+test('shows collection detail view when collection is selected', () => {
+  seedMockAppData();
+  renderApp();
+  selectCollectionByName('User API');
+  expect(screen.getByRole('heading', { name: 'User API' })).toBeInTheDocument();
+  expect(screen.getByText(/default bearer token/i)).toBeInTheDocument();
+  expect(
+    screen.queryByRole('separator', { name: /resize response panel/i })
+  ).not.toBeInTheDocument();
+});
+
 test('shows environment name in top bar when request uses attached env', () => {
   seedMockAppData();
   renderApp();
@@ -177,8 +198,10 @@ test('renders environment variables in URL as highlighted tokens', () => {
   expect(screen.getByText('{{BASE_URL}}')).toHaveClass('text-accent');
 });
 
-test('URL field is editable', () => {
+test('URL field is editable when a request is selected', () => {
+  seedMockAppData();
   renderApp();
+  selectRequestByName('List users');
   const urlField = screen.getByRole('textbox', { name: /request url/i });
   fireEvent.change(urlField, {
     target: { value: 'https://example.com/new-path' },
@@ -186,8 +209,11 @@ test('URL field is editable', () => {
   expect(urlField).toHaveValue('https://example.com/new-path');
 });
 
-test('Send button is disabled when URL is empty', () => {
+test('Send button is disabled when URL is empty on selected request', () => {
   renderApp();
+  openSidebar();
+  fireEvent.click(screen.getByRole('button', { name: /\+ collection/i }));
+  fireEvent.click(screen.getByRole('button', { name: /\+ request/i }));
   expect(screen.getByRole('button', { name: /^send$/i })).toBeDisabled();
 });
 

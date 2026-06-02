@@ -9,11 +9,13 @@ import MethodSelector from './MethodSelector';
 import UrlInput from './UrlInput';
 import HeadersEditor from './HeadersEditor';
 import ParamsEditor from './ParamsEditor';
+import AuthEditor from './AuthEditor';
 import BodyEditor from './BodyEditor';
 import SendButton from './SendButton';
 
 const REQUEST_TABS = [
   { id: 'params', label: 'Params' },
+  { id: 'auth', label: 'Authorization' },
   { id: 'headers', label: 'Headers' },
   { id: 'body', label: 'Body' },
 ];
@@ -25,6 +27,8 @@ const REQUEST_TABS = [
  * @param {Array<{ key: string, value: string }>} props.headers
  * @param {Array<{ key: string, value: string }>} props.params
  * @param {string} props.body
+ * @param {{ type: 'none' | 'bearer', token: string } | null | undefined} [props.collectionAuth]
+ * @param {{ mode: 'inherit' | 'override', type: 'none' | 'bearer', token: string }} props.requestAuth
  * @param {Record<string, string>} [props.envVariableMap]
  * @param {(field: string, value: unknown) => void} props.onChange
  * @param {() => void} [props.onSend]
@@ -37,6 +41,8 @@ export default function RequestBuilder({
   headers,
   params,
   body,
+  collectionAuth,
+  requestAuth,
   envVariableMap,
   onChange,
   onSend,
@@ -106,6 +112,13 @@ export default function RequestBuilder({
           <ParamsEditor
             params={params}
             onChange={(value) => onChange('params', value)}
+          />
+        )}
+        {activeTab === 'auth' && (
+          <AuthEditor
+            collectionAuth={collectionAuth}
+            requestAuth={requestAuth}
+            onRequestAuthChange={(value) => onChange('auth', value)}
           />
         )}
         {activeTab === 'headers' && (
