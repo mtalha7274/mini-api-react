@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { canSendRequest } from '../../lib/http/canSendRequest';
 import { Tabs } from '../shared';
 import MethodSelector from './MethodSelector';
 import UrlInput from './UrlInput';
@@ -30,8 +31,10 @@ function validateJson(body) {
  * @param {Array<{ key: string, value: string }>} props.headers
  * @param {Array<{ key: string, value: string }>} props.params
  * @param {string} props.body
+ * @param {Record<string, string>} [props.envVariableMap]
  * @param {(field: string, value: unknown) => void} props.onChange
  * @param {() => void} [props.onSend]
+ * @param {boolean} [props.isSending]
  * @param {React.RefObject<HTMLElement>} [props.tabsEndRef] - clamp anchor below tab bar
  */
 export default function RequestBuilder({
@@ -40,14 +43,20 @@ export default function RequestBuilder({
   headers,
   params,
   body,
+  envVariableMap,
   onChange,
   onSend,
+  isSending = false,
   tabsEndRef,
 }) {
   const [activeTab, setActiveTab] = useState('params');
   const bodyError = useMemo(
     () => (activeTab === 'body' ? validateJson(body) : null),
     [activeTab, body]
+  );
+  const sendEnabled = useMemo(
+    () => canSendRequest({ method, url, body }),
+    [method, url, body]
   );
 
   return (
@@ -59,9 +68,18 @@ export default function RequestBuilder({
               method={method}
               onChange={(value) => onChange('method', value)}
             />
-            <UrlInput url={url} onChange={(value) => onChange('url', value)} />
+            <UrlInput
+              url={url}
+              envVariableMap={envVariableMap}
+              onChange={(value) => onChange('url', value)}
+            />
           </div>
-          <SendButton onClick={onSend} disabled className="w-full shrink-0 sm:w-auto" />
+          <SendButton
+            onClick={onSend}
+            disabled={!sendEnabled}
+            loading={isSending}
+            className="w-full shrink-0 sm:w-auto"
+          />
         </div>
       </div>
 

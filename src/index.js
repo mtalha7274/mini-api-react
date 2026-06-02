@@ -5,6 +5,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { ThemeProvider } from './theme/ThemeContext';
 import { CollectionProvider } from './context/CollectionContext/CollectionContext';
+import { EnvironmentProvider } from './context/EnvironmentContext/EnvironmentContext';
 import { getInitialTheme } from './theme/themeStorage';
 
 if (getInitialTheme() === 'dark') {
@@ -16,7 +17,9 @@ root.render(
   <React.StrictMode>
     <ThemeProvider>
       <CollectionProvider>
-        <App />
+        <EnvironmentProvider>
+          <App />
+        </EnvironmentProvider>
       </CollectionProvider>
     </ThemeProvider>
   </React.StrictMode>

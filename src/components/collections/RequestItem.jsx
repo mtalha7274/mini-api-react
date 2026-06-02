@@ -26,7 +26,7 @@ export default function RequestItem({
 }) {
   return (
     <div
-      className={`group flex items-center gap-1 rounded-lg px-1 py-1 ${
+      className={`group flex items-center gap-1 rounded-lg px-1 py-1 transition-colors ${
         isActive ? 'bg-accent/15' : 'hover:bg-surfaceMuted'
       }`}
     >

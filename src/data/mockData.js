@@ -4,6 +4,7 @@ export const mockCollections = [
   {
     id: 'col-1',
     name: 'User API',
+    environmentId: 'env-dev',
     requests: [
       {
         id: 'req-1',
@@ -22,6 +23,7 @@ export const mockCollections = [
   {
     id: 'col-2',
     name: 'Auth',
+    environmentId: null,
     requests: [
       {
         id: 'req-3',
@@ -133,8 +135,6 @@ export const mockHistory = [
     },
   },
 ];
-
-export const defaultEnvironmentId = 'env-dev';
 
 export function createEmptyKeyValue() {
   return { key: '', value: '' };

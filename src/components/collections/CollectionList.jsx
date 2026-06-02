@@ -2,7 +2,8 @@ import CollectionItem from './CollectionItem';
 
 /**
  * @param {object} props
- * @param {Array<{ id: string, name: string, requests: object[] }>} props.collections
+ * @param {Array<{ id: string, name: string, environmentId: string | null, requests: object[] }>} props.collections
+ * @param {Array<{ id: string, name: string }>} props.environments
  * @param {Record<string, boolean>} props.expandedIds
  * @param {string | null} props.activeRequestId
  * @param {() => void} props.onCreateCollection
@@ -10,12 +11,14 @@ import CollectionItem from './CollectionItem';
  * @param {(requestId: string) => void} props.onSelectRequest
  * @param {(collectionId: string, name: string) => void} props.onRenameCollection
  * @param {(collectionId: string) => void} props.onDeleteCollection
+ * @param {(collectionId: string, environmentId: string | null) => void} props.onSetCollectionEnvironment
  * @param {(collectionId: string) => void} props.onAddRequest
  * @param {(collectionId: string, requestId: string, name: string) => void} props.onRenameRequest
  * @param {(collectionId: string, requestId: string) => void} props.onDeleteRequest
  */
 export default function CollectionList({
   collections,
+  environments,
   expandedIds,
   activeRequestId,
   onCreateCollection,
@@ -23,6 +26,7 @@ export default function CollectionList({
   onSelectRequest,
   onRenameCollection,
   onDeleteCollection,
+  onSetCollectionEnvironment,
   onAddRequest,
   onRenameRequest,
   onDeleteRequest,
@@ -48,12 +52,16 @@ export default function CollectionList({
             <CollectionItem
               key={collection.id}
               collection={collection}
+              environments={environments}
               isExpanded={!!expandedIds[collection.id]}
               activeRequestId={activeRequestId}
               onToggle={() => onToggleCollection(collection.id)}
               onSelectRequest={onSelectRequest}
               onRename={(name) => onRenameCollection(collection.id, name)}
               onDelete={() => onDeleteCollection(collection.id)}
+              onSetEnvironment={(environmentId) =>
+                onSetCollectionEnvironment(collection.id, environmentId)
+              }
               onAddRequest={() => onAddRequest(collection.id)}
               onRenameRequest={(requestId, name) =>
                 onRenameRequest(collection.id, requestId, name)

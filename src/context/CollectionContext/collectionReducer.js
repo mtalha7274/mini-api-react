@@ -8,6 +8,8 @@ export const CollectionActionTypes = {
   RENAME_REQUEST: 'RENAME_REQUEST',
   DELETE_REQUEST: 'DELETE_REQUEST',
   SYNC_REQUEST_REF: 'SYNC_REQUEST_REF',
+  SET_COLLECTION_ENVIRONMENT: 'SET_COLLECTION_ENVIRONMENT',
+  CLEAR_ENVIRONMENT_REFERENCES: 'CLEAR_ENVIRONMENT_REFERENCES',
 };
 
 export function createCollection() {
@@ -16,7 +18,12 @@ export function createCollection() {
     type: CollectionActionTypes.CREATE_COLLECTION,
     payload: {
       id,
-      collection: { id, name: 'New Collection', requests: [] },
+      collection: {
+        id,
+        name: 'New Collection',
+        environmentId: null,
+        requests: [],
+      },
     },
   };
 }
@@ -64,6 +71,20 @@ export function syncRequestRef(requestId, method, url) {
   return {
     type: CollectionActionTypes.SYNC_REQUEST_REF,
     payload: { requestId, method, url },
+  };
+}
+
+export function setCollectionEnvironment(collectionId, environmentId) {
+  return {
+    type: CollectionActionTypes.SET_COLLECTION_ENVIRONMENT,
+    payload: { collectionId, environmentId },
+  };
+}
+
+export function clearEnvironmentReferences(environmentId) {
+  return {
+    type: CollectionActionTypes.CLEAR_ENVIRONMENT_REFERENCES,
+    payload: { environmentId },
   };
 }
 
@@ -150,6 +171,28 @@ export function collectionReducer(state, action) {
             req.id === requestId ? { ...req, method, url } : req
           ),
         })),
+      };
+    }
+
+    case CollectionActionTypes.SET_COLLECTION_ENVIRONMENT: {
+      const { collectionId, environmentId } = action.payload;
+      return {
+        ...state,
+        collections: state.collections.map((col) =>
+          col.id === collectionId ? { ...col, environmentId } : col
+        ),
+      };
+    }
+
+    case CollectionActionTypes.CLEAR_ENVIRONMENT_REFERENCES: {
+      const { environmentId } = action.payload;
+      return {
+        ...state,
+        collections: state.collections.map((col) =>
+          col.environmentId === environmentId
+            ? { ...col, environmentId: null }
+            : col
+        ),
       };
     }
 

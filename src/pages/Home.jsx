@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { AppShell } from '../components/layout';
 import { useCollection } from '../context/CollectionContext/CollectionContext';
+import { useEnvironment } from '../context/EnvironmentContext/EnvironmentContext';
 import {
   createCollection,
   renameCollection,
@@ -9,19 +10,28 @@ import {
   renameRequest,
   deleteRequest,
   syncRequestRef,
+  setCollectionEnvironment,
+  clearEnvironmentReferences,
   findRequestInCollections,
   getFirstRequestId,
   collectionReducer,
 } from '../context/CollectionContext/collectionReducer';
 import {
-  mockHistory,
-  mockEnvironments,
+  createEnvironment,
+  renameEnvironment,
+  deleteEnvironment,
+  updateEnvironmentVariables,
+  environmentReducer,
+} from '../context/EnvironmentContext/environmentReducer';
+import {
   mockActiveRequest,
   mockResponse,
-  defaultEnvironmentId,
   cloneKeyValueRows,
   createEmptyKeyValue,
 } from '../data/mockData';
+import { canSendRequest } from '../lib/http/canSendRequest';
+import { variablesArrayToMap } from '../utils/envParser';
+import { executeRequest } from '../utils/requestExecutor';
 
 const emptyEditorState = {
   method: 'GET',
@@ -42,56 +52,71 @@ function loadRequestIntoEditor(ref) {
   };
 }
 
+function countCollectionsUsingEnvironment(collections, environmentId) {
+  return collections.filter((col) => col.environmentId === environmentId)
+    .length;
+}
+
 export default function Home() {
-  const { collections, dispatch } = useCollection();
+  const { collections, dispatch: collectionDispatch } = useCollection();
+  const { environments, dispatch: environmentDispatch } = useEnvironment();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('collections');
   const [expandedIds, setExpandedIds] = useState({ 'col-1': true, 'col-2': false });
   const [activeRequestId, setActiveRequestId] = useState('req-1');
-  const [activeHistoryId, setActiveHistoryId] = useState(null);
-
-  const [history] = useState(mockHistory);
-  const [environments, setEnvironments] = useState(mockEnvironments);
-  const [activeEnvironmentId, setActiveEnvironmentId] = useState(defaultEnvironmentId);
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState('env-dev');
 
   const [request, setRequest] = useState(() => {
-    const found = findRequestInCollections(
-      collections,
-      'req-1'
-    );
+    const found = findRequestInCollections(collections, 'req-1');
     return found
       ? loadRequestIntoEditor(found.request)
       : { ...emptyEditorState };
   });
 
   const [response, setResponse] = useState(mockResponse);
+  const [isSending, setIsSending] = useState(false);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
 
-  const selectRequestById = useCallback(
-    (requestId, cols) => {
-      setActiveRequestId(requestId);
-      setActiveHistoryId(null);
-      const found = findRequestInCollections(cols, requestId);
-      if (found) {
-        setRequest(loadRequestIntoEditor(found.request));
-      }
-    },
-    []
+  const activeCollectionContext = useMemo(() => {
+    if (!activeRequestId) return null;
+    return findRequestInCollections(collections, activeRequestId);
+  }, [collections, activeRequestId]);
+
+  const resolvedEnvironment = useMemo(() => {
+    const envId = activeCollectionContext?.collection.environmentId;
+    if (!envId) return null;
+    return environments.find((e) => e.id === envId) ?? null;
+  }, [environments, activeCollectionContext]);
+
+  const envVariableMap = useMemo(
+    () => variablesArrayToMap(resolvedEnvironment?.variables ?? []),
+    [resolvedEnvironment]
   );
+
+  const selectRequestById = useCallback((requestId, cols) => {
+    setActiveRequestId(requestId);
+    const found = findRequestInCollections(cols, requestId);
+    if (found) {
+      setRequest(loadRequestIntoEditor(found.request));
+    }
+  }, []);
 
   const handleRequestFieldChange = useCallback(
     (field, value) => {
       setRequest((prev) => {
         const next = { ...prev, [field]: value };
         if (activeRequestId && (field === 'method' || field === 'url')) {
-          dispatch(syncRequestRef(activeRequestId, next.method, next.url));
+          collectionDispatch(
+            syncRequestRef(activeRequestId, next.method, next.url)
+          );
         }
         return next;
       });
     },
-    [activeRequestId, dispatch]
+    [activeRequestId, collectionDispatch]
   );
 
   const handleToggleCollection = useCallback((collectionId) => {
@@ -111,17 +136,17 @@ export default function Home() {
 
   const handleCreateCollection = useCallback(() => {
     const action = createCollection();
-    dispatch(action);
+    collectionDispatch(action);
     const { id } = action.payload;
     setExpandedIds((prev) => ({ ...prev, [id]: true }));
     setSidebarTab('collections');
-  }, [dispatch]);
+  }, [collectionDispatch]);
 
   const handleRenameCollection = useCallback(
     (collectionId, name) => {
-      dispatch(renameCollection(collectionId, name));
+      collectionDispatch(renameCollection(collectionId, name));
     },
-    [dispatch]
+    [collectionDispatch]
   );
 
   const handleDeleteCollection = useCallback(
@@ -140,7 +165,7 @@ export default function Home() {
         { collections },
         deleteAction
       ).collections;
-      dispatch(deleteAction);
+      collectionDispatch(deleteAction);
       setExpandedIds((prev) => {
         const next = { ...prev };
         delete next[collectionId];
@@ -159,17 +184,23 @@ export default function Home() {
         }
       }
     },
-    [collections, dispatch, activeRequestId, selectRequestById]
+    [collections, collectionDispatch, activeRequestId, selectRequestById]
+  );
+
+  const handleSetCollectionEnvironment = useCallback(
+    (collectionId, environmentId) => {
+      collectionDispatch(setCollectionEnvironment(collectionId, environmentId));
+    },
+    [collectionDispatch]
   );
 
   const handleAddRequest = useCallback(
     (collectionId) => {
       const action = addRequestToCollection(collectionId);
-      dispatch(action);
+      collectionDispatch(action);
       const { request: newReq } = action.payload;
       setExpandedIds((prev) => ({ ...prev, [collectionId]: true }));
       setActiveRequestId(newReq.id);
-      setActiveHistoryId(null);
       setRequest({
         method: newReq.method,
         url: newReq.url,
@@ -179,14 +210,14 @@ export default function Home() {
       });
       setSidebarTab('collections');
     },
-    [dispatch]
+    [collectionDispatch]
   );
 
   const handleRenameRequest = useCallback(
     (collectionId, requestId, name) => {
-      dispatch(renameRequest(collectionId, requestId, name));
+      collectionDispatch(renameRequest(collectionId, requestId, name));
     },
-    [dispatch]
+    [collectionDispatch]
   );
 
   const handleDeleteRequest = useCallback(
@@ -201,7 +232,7 @@ export default function Home() {
         { collections },
         deleteAction
       ).collections;
-      dispatch(deleteAction);
+      collectionDispatch(deleteAction);
       if (activeRequestId === requestId) {
         const nextId = getFirstRequestId(nextCollections);
         if (nextId) {
@@ -212,53 +243,96 @@ export default function Home() {
         }
       }
     },
-    [collections, dispatch, activeRequestId, selectRequestById]
+    [collections, collectionDispatch, activeRequestId, selectRequestById]
   );
 
-  const handleSelectHistory = useCallback(
-    (historyId) => {
-      setActiveHistoryId(historyId);
-      const item = history.find((h) => h.id === historyId);
-      if (item) {
-        setRequest((prev) => ({
-          ...prev,
-          method: item.method,
-          url: item.url,
-        }));
-        if (item.response) {
-          setResponse(item.response);
-        }
-      }
-      closeSidebar();
+  const handleCreateEnvironment = useCallback(() => {
+    const action = createEnvironment();
+    environmentDispatch(action);
+    setSelectedEnvironmentId(action.payload.id);
+    setSidebarTab('environments');
+  }, [environmentDispatch]);
+
+  const handleRenameEnvironment = useCallback(
+    (environmentId, name) => {
+      environmentDispatch(renameEnvironment(environmentId, name));
     },
-    [history, closeSidebar]
+    [environmentDispatch]
   );
 
-  const handleEnvironmentChange = useCallback((envId) => {
-    setActiveEnvironmentId(envId);
-  }, []);
+  const handleDeleteEnvironment = useCallback(
+    (environmentId) => {
+      const env = environments.find((e) => e.id === environmentId);
+      if (!env) return;
 
-  const handleVariablesChange = useCallback((envId, variables) => {
-    setEnvironments((prev) =>
-      prev.map((env) =>
-        env.id === envId ? { ...env, variables } : env
-      )
-    );
-  }, []);
+      const refCount = countCollectionsUsingEnvironment(
+        collections,
+        environmentId
+      );
+      const refNote =
+        refCount > 0
+          ? ` It is attached to ${refCount} collection${refCount === 1 ? '' : 's'}.`
+          : '';
+
+      if (!window.confirm(`Delete environment "${env.name}"?${refNote}`)) {
+        return;
+      }
+
+      const deleteAction = deleteEnvironment(environmentId);
+      const nextEnvironments = environmentReducer(
+        { environments },
+        deleteAction
+      ).environments;
+      environmentDispatch(deleteAction);
+      collectionDispatch(clearEnvironmentReferences(environmentId));
+
+      if (selectedEnvironmentId === environmentId) {
+        setSelectedEnvironmentId(nextEnvironments[0]?.id ?? null);
+      }
+    },
+    [
+      environments,
+      collections,
+      environmentDispatch,
+      collectionDispatch,
+      selectedEnvironmentId,
+    ]
+  );
+
+  const handleSend = useCallback(async () => {
+    if (!canSendRequest(request) || isSending) return;
+
+    setIsSending(true);
+    try {
+      const result = await executeRequest({
+        method: request.method,
+        url: request.url,
+        headers: request.headers,
+        params: request.params,
+        body: request.body,
+        envVariableMap,
+      });
+      setResponse(result);
+    } finally {
+      setIsSending(false);
+    }
+  }, [request, envVariableMap, isSending]);
+
+  const handleVariablesChange = useCallback(
+    (environmentId, variables) => {
+      environmentDispatch(
+        updateEnvironmentVariables(environmentId, variables)
+      );
+    },
+    [environmentDispatch]
+  );
 
   const environmentProps = useMemo(
     () => ({
-      environments,
-      activeEnvironmentId,
-      onEnvironmentChange: handleEnvironmentChange,
+      resolvedEnvironment,
       onVariablesChange: handleVariablesChange,
     }),
-    [
-      environments,
-      activeEnvironmentId,
-      handleEnvironmentChange,
-      handleVariablesChange,
-    ]
+    [resolvedEnvironment, handleVariablesChange]
   );
 
   const requestProps = useMemo(
@@ -268,9 +342,12 @@ export default function Home() {
       headers: request.headers,
       params: request.params,
       body: request.body,
+      envVariableMap,
       onChange: handleRequestFieldChange,
+      onSend: handleSend,
+      isSending,
     }),
-    [request, handleRequestFieldChange]
+    [request, envVariableMap, handleRequestFieldChange, handleSend, isSending]
   );
 
   const sidebarProps = useMemo(
@@ -279,6 +356,7 @@ export default function Home() {
       onTabChange: setSidebarTab,
       collectionsProps: {
         collections,
+        environments,
         expandedIds,
         activeRequestId,
         onCreateCollection: handleCreateCollection,
@@ -286,19 +364,25 @@ export default function Home() {
         onSelectRequest: handleSelectRequest,
         onRenameCollection: handleRenameCollection,
         onDeleteCollection: handleDeleteCollection,
+        onSetCollectionEnvironment: handleSetCollectionEnvironment,
         onAddRequest: handleAddRequest,
         onRenameRequest: handleRenameRequest,
         onDeleteRequest: handleDeleteRequest,
       },
-      historyProps: {
-        history,
-        activeHistoryId,
-        onSelect: handleSelectHistory,
+      environmentsProps: {
+        environments,
+        selectedEnvironmentId,
+        onCreateEnvironment: handleCreateEnvironment,
+        onSelectEnvironment: setSelectedEnvironmentId,
+        onRenameEnvironment: handleRenameEnvironment,
+        onDeleteEnvironment: handleDeleteEnvironment,
+        onVariablesChange: handleVariablesChange,
       },
     }),
     [
       sidebarTab,
       collections,
+      environments,
       expandedIds,
       activeRequestId,
       handleCreateCollection,
@@ -306,12 +390,15 @@ export default function Home() {
       handleSelectRequest,
       handleRenameCollection,
       handleDeleteCollection,
+      handleSetCollectionEnvironment,
       handleAddRequest,
       handleRenameRequest,
       handleDeleteRequest,
-      history,
-      activeHistoryId,
-      handleSelectHistory,
+      selectedEnvironmentId,
+      handleCreateEnvironment,
+      handleRenameEnvironment,
+      handleDeleteEnvironment,
+      handleVariablesChange,
     ]
   );
 

@@ -25,6 +25,10 @@ Wrap the app with `CollectionProvider` (see `src/index.js`).
 | `RENAME_REQUEST` | `{ collectionId, requestId, name }` |
 | `DELETE_REQUEST` | `{ collectionId, requestId }` |
 | `SYNC_REQUEST_REF` | `{ requestId, method, url }` |
+| `SET_COLLECTION_ENVIRONMENT` | `{ collectionId, environmentId }` (`null` detaches) |
+| `CLEAR_ENVIRONMENT_REFERENCES` | `{ environmentId }` |
+
+Collections include optional `environmentId` linking to `EnvironmentContext`.
 
 ## UI
 
