@@ -1,4 +1,5 @@
 import { generateId } from '../../utils/generateId';
+import { createEmptyKeyValue, cloneKeyValueRows } from '../../data/mockData';
 
 export const CollectionActionTypes = {
   CREATE_COLLECTION: 'CREATE_COLLECTION',
@@ -7,10 +8,22 @@ export const CollectionActionTypes = {
   ADD_REQUEST_TO_COLLECTION: 'ADD_REQUEST_TO_COLLECTION',
   RENAME_REQUEST: 'RENAME_REQUEST',
   DELETE_REQUEST: 'DELETE_REQUEST',
-  SYNC_REQUEST_REF: 'SYNC_REQUEST_REF',
+  SYNC_REQUEST_EDITOR: 'SYNC_REQUEST_EDITOR',
   SET_COLLECTION_ENVIRONMENT: 'SET_COLLECTION_ENVIRONMENT',
   CLEAR_ENVIRONMENT_REFERENCES: 'CLEAR_ENVIRONMENT_REFERENCES',
 };
+
+function createEmptyRequest(id) {
+  return {
+    id,
+    name: 'New Request',
+    method: 'GET',
+    url: '',
+    headers: [createEmptyKeyValue()],
+    params: [createEmptyKeyValue()],
+    body: '',
+  };
+}
 
 export function createCollection() {
   const id = generateId('col');
@@ -48,7 +61,7 @@ export function addRequestToCollection(collectionId) {
     type: CollectionActionTypes.ADD_REQUEST_TO_COLLECTION,
     payload: {
       collectionId,
-      request: { id, name: 'New Request', method: 'GET', url: '' },
+      request: createEmptyRequest(id),
     },
   };
 }
@@ -67,10 +80,21 @@ export function deleteRequest(collectionId, requestId) {
   };
 }
 
-export function syncRequestRef(requestId, method, url) {
+/**
+ * @param {string} requestId
+ * @param {{ method: string, url: string, headers: object[], params: object[], body: string }} editor
+ */
+export function syncRequestEditor(requestId, editor) {
   return {
-    type: CollectionActionTypes.SYNC_REQUEST_REF,
-    payload: { requestId, method, url },
+    type: CollectionActionTypes.SYNC_REQUEST_EDITOR,
+    payload: {
+      requestId,
+      method: editor.method,
+      url: editor.url,
+      headers: cloneKeyValueRows(editor.headers),
+      params: cloneKeyValueRows(editor.params),
+      body: editor.body,
+    },
   };
 }
 
@@ -161,14 +185,17 @@ export function collectionReducer(state, action) {
       };
     }
 
-    case CollectionActionTypes.SYNC_REQUEST_REF: {
-      const { requestId, method, url } = action.payload;
+    case CollectionActionTypes.SYNC_REQUEST_EDITOR: {
+      const { requestId, method, url, headers, params, body } =
+        action.payload;
       return {
         ...state,
         collections: state.collections.map((col) => ({
           ...col,
           requests: col.requests.map((req) =>
-            req.id === requestId ? { ...req, method, url } : req
+            req.id === requestId
+              ? { ...req, method, url, headers, params, body }
+              : req
           ),
         })),
       };

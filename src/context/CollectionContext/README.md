@@ -1,6 +1,6 @@
 # CollectionContext
 
-Global collection + request tree state via `useReducer`.
+Global collection + request tree state via `useReducer`. Hydrates from `localStorage` (`mini-api-collections`) on init; saves on every change.
 
 ## Usage
 
@@ -14,6 +14,14 @@ dispatch(createCollection());
 
 Wrap the app with `CollectionProvider` (see `src/index.js`).
 
+## Request shape
+
+Each request in the tree stores the full editor state:
+
+`{ id, name, method, url, headers: KeyValueRow[], params: KeyValueRow[], body: string }`
+
+Legacy entries without `headers` / `params` / `body` are normalized on load via `src/storage/appStorage.js`.
+
 ## Actions
 
 | Action | Payload |
@@ -24,7 +32,7 @@ Wrap the app with `CollectionProvider` (see `src/index.js`).
 | `ADD_REQUEST_TO_COLLECTION` | `{ collectionId, request }` |
 | `RENAME_REQUEST` | `{ collectionId, requestId, name }` |
 | `DELETE_REQUEST` | `{ collectionId, requestId }` |
-| `SYNC_REQUEST_REF` | `{ requestId, method, url }` |
+| `SYNC_REQUEST_EDITOR` | `{ requestId, method, url, headers, params, body }` |
 | `SET_COLLECTION_ENVIRONMENT` | `{ collectionId, environmentId }` (`null` detaches) |
 | `CLEAR_ENVIRONMENT_REFERENCES` | `{ environmentId }` |
 

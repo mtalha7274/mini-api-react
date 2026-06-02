@@ -9,7 +9,7 @@ import {
   addRequestToCollection,
   renameRequest,
   deleteRequest,
-  syncRequestRef,
+  syncRequestEditor,
   setCollectionEnvironment,
   clearEnvironmentReferences,
   findRequestInCollections,
@@ -24,8 +24,7 @@ import {
   environmentReducer,
 } from '../context/EnvironmentContext/environmentReducer';
 import {
-  mockActiveRequest,
-  mockResponse,
+  emptyResponse,
   cloneKeyValueRows,
   createEmptyKeyValue,
 } from '../data/mockData';
@@ -46,9 +45,9 @@ function loadRequestIntoEditor(ref) {
   return {
     method: ref.method,
     url: ref.url,
-    headers: cloneKeyValueRows(mockActiveRequest.headers),
-    params: cloneKeyValueRows(mockActiveRequest.params),
-    body: mockActiveRequest.body,
+    headers: cloneKeyValueRows(ref.headers),
+    params: cloneKeyValueRows(ref.params),
+    body: ref.body ?? '',
   };
 }
 
@@ -63,18 +62,12 @@ export default function Home() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('collections');
-  const [expandedIds, setExpandedIds] = useState({ 'col-1': true, 'col-2': false });
-  const [activeRequestId, setActiveRequestId] = useState('req-1');
-  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState('env-dev');
+  const [expandedIds, setExpandedIds] = useState({});
+  const [activeRequestId, setActiveRequestId] = useState(null);
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState(null);
 
-  const [request, setRequest] = useState(() => {
-    const found = findRequestInCollections(collections, 'req-1');
-    return found
-      ? loadRequestIntoEditor(found.request)
-      : { ...emptyEditorState };
-  });
-
-  const [response, setResponse] = useState(mockResponse);
+  const [request, setRequest] = useState(() => ({ ...emptyEditorState }));
+  const [response, setResponse] = useState(emptyResponse);
   const [isSending, setIsSending] = useState(false);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
@@ -108,10 +101,8 @@ export default function Home() {
     (field, value) => {
       setRequest((prev) => {
         const next = { ...prev, [field]: value };
-        if (activeRequestId && (field === 'method' || field === 'url')) {
-          collectionDispatch(
-            syncRequestRef(activeRequestId, next.method, next.url)
-          );
+        if (activeRequestId) {
+          collectionDispatch(syncRequestEditor(activeRequestId, next));
         }
         return next;
       });
@@ -201,13 +192,7 @@ export default function Home() {
       const { request: newReq } = action.payload;
       setExpandedIds((prev) => ({ ...prev, [collectionId]: true }));
       setActiveRequestId(newReq.id);
-      setRequest({
-        method: newReq.method,
-        url: newReq.url,
-        headers: [createEmptyKeyValue()],
-        params: [createEmptyKeyValue()],
-        body: '',
-      });
+      setRequest(loadRequestIntoEditor(newReq));
       setSidebarTab('collections');
     },
     [collectionDispatch]

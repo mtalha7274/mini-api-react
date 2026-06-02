@@ -1,8 +1,5 @@
-import { mockEnvironments } from '../../data/mockData';
+import { loadEnvironments } from '../../storage/appStorage';
 
-export const initialEnvironmentState = {
-  environments: mockEnvironments.map((env) => ({
-    ...env,
-    variables: env.variables.map((v) => ({ ...v })),
-  })),
-};
+export function getInitialEnvironmentState() {
+  return loadEnvironments();
+}

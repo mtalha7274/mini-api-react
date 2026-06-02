@@ -76,6 +76,14 @@ export const mockActiveRequest = {
   body: '{\n  "name": "Jane Doe",\n  "email": "jane@example.com"\n}',
 };
 
+export const emptyResponse = {
+  status: 0,
+  statusText: '—',
+  duration: 0,
+  headers: {},
+  body: '',
+};
+
 export const mockResponse = {
   status: 200,
   statusText: 'OK',

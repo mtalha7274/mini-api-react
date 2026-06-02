@@ -1,14 +1,20 @@
-import { createContext, useContext, useMemo, useReducer } from 'react';
+import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import { saveEnvironments } from '../../storage/appStorage';
 import { environmentReducer } from './environmentReducer';
-import { initialEnvironmentState } from './initialState';
+import { getInitialEnvironmentState } from './initialState';
 
 export const EnvironmentContext = createContext(null);
 
 export function EnvironmentProvider({ children }) {
   const [state, dispatch] = useReducer(
     environmentReducer,
-    initialEnvironmentState
+    undefined,
+    getInitialEnvironmentState
   );
+
+  useEffect(() => {
+    saveEnvironments(state.environments);
+  }, [state.environments]);
 
   const value = useMemo(
     () => ({

@@ -1,14 +1,20 @@
-import { createContext, useContext, useMemo, useReducer } from 'react';
+import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import { saveCollections } from '../../storage/appStorage';
 import { collectionReducer } from './collectionReducer';
-import { initialCollectionState } from './initialState';
+import { getInitialCollectionState } from './initialState';
 
 export const CollectionContext = createContext(null);
 
 export function CollectionProvider({ children }) {
   const [state, dispatch] = useReducer(
     collectionReducer,
-    initialCollectionState
+    undefined,
+    getInitialCollectionState
   );
+
+  useEffect(() => {
+    saveCollections(state.collections);
+  }, [state.collections]);
 
   const value = useMemo(
     () => ({

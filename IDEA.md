@@ -298,13 +298,16 @@ On Send:
 - [`src/context/CollectionContext/`](src/context/CollectionContext/) — `useCollection()`, `collectionReducer`
 - Sidebar: **+ Collection**, **+ Request**, inline rename, delete (confirm)
 - Per-collection environment attach dropdown (`SET_COLLECTION_ENVIRONMENT`)
-- Editor syncs `method` / `url` to tree via `SYNC_REQUEST_REF` for active request
-- Full request body (headers, params, body) not yet stored per request — loaded from template on select
+- **Empty bootstrap:** first visit has no collections/requests; sidebar shows empty state
+- **Persistence:** `localStorage` key `mini-api-collections`; provider hydrates on load, saves on change
+- **RequestRef:** `{ id, name, method, url, headers, params, body }` — editor syncs all fields via `SYNC_REQUEST_EDITOR` for active request
 
 ### Environments (EnvironmentContext)
 
 - [`src/context/EnvironmentContext/`](src/context/EnvironmentContext/) — `useEnvironment()`, `environmentReducer`
 - Sidebar **Environments** tab: **+ Environment**, rename, delete, variables editor
+- **Empty bootstrap:** first visit has no environments; top environment bar hidden until a collection attaches one
+- **Persistence:** `localStorage` key `mini-api-environments`; provider hydrates on load, saves on change
 - Deleting an environment clears `environmentId` on attached collections (`CLEAR_ENVIRONMENT_REFERENCES`)
 - Send resolves variables from the active collection’s attached environment via `envParser` + `buildRequest`
 
@@ -348,6 +351,8 @@ src/
     Home.jsx
   data/
     mockData.js
+  storage/
+    appStorage.js
   lib/
     http/
       get.js, post.js, put.js, patch.js, delete.js
@@ -376,7 +381,7 @@ src/
 
 ## 10. Advanced Enhancements (Future)
 
-- Persist state to localStorage
+- Persist history, last response, UI tab state (collections/environments done — see `src/storage/appStorage.js`)
 - Request cloning
 - Middleware-style logging in reducers
 - Optimistic history updates

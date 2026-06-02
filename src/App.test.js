@@ -3,6 +3,33 @@ import App from './App';
 import { ThemeProvider } from './theme/ThemeContext';
 import { CollectionProvider } from './context/CollectionContext/CollectionContext';
 import { EnvironmentProvider } from './context/EnvironmentContext/EnvironmentContext';
+import { saveCollections, saveEnvironments } from './storage/appStorage';
+import {
+  mockCollections,
+  mockEnvironments,
+  mockActiveRequest,
+  cloneKeyValueRows,
+} from './data/mockData';
+
+function seedMockAppData() {
+  saveEnvironments(
+    mockEnvironments.map((env) => ({
+      ...env,
+      variables: env.variables.map((v) => ({ ...v })),
+    }))
+  );
+  saveCollections(
+    mockCollections.map((col) => ({
+      ...col,
+      requests: col.requests.map((req) => ({
+        ...req,
+        headers: cloneKeyValueRows(mockActiveRequest.headers),
+        params: cloneKeyValueRows(mockActiveRequest.params),
+        body: req.id === 'req-1' ? mockActiveRequest.body : '',
+      })),
+    }))
+  );
+}
 
 function renderApp() {
   return render(
@@ -15,6 +42,29 @@ function renderApp() {
     </ThemeProvider>
   );
 }
+
+function openSidebar() {
+  fireEvent.click(screen.getByRole('button', { name: /open sidebar/i }));
+}
+
+function expandCollectionByName(collectionName) {
+  openSidebar();
+  const nameEl = screen.getByText(collectionName);
+  const row = nameEl.closest('.mb-1');
+  const expandBtn = within(row).getByRole('button', {
+    name: /expand collection/i,
+  });
+  fireEvent.click(expandBtn);
+}
+
+function selectRequestByName(requestName, collectionName = 'User API') {
+  expandCollectionByName(collectionName);
+  fireEvent.click(screen.getByText(requestName));
+}
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 test('renders Mini API shell with Send button', () => {
   renderApp();
@@ -50,9 +100,15 @@ test('renders sidebar resize handle on desktop layout', () => {
   ).toBeInTheDocument();
 });
 
+test('shows empty collections state on first visit', () => {
+  renderApp();
+  openSidebar();
+  expect(screen.getByText(/no collections yet/i)).toBeInTheDocument();
+});
+
 test('renders add collection control', () => {
   renderApp();
-  fireEvent.click(screen.getByRole('button', { name: /open sidebar/i }));
+  openSidebar();
   expect(
     screen.getByRole('button', { name: /\+ collection/i })
   ).toBeInTheDocument();
@@ -60,7 +116,7 @@ test('renders add collection control', () => {
 
 test('can add a new collection', () => {
   renderApp();
-  fireEvent.click(screen.getByRole('button', { name: /open sidebar/i }));
+  openSidebar();
   fireEvent.click(screen.getByRole('button', { name: /\+ collection/i }));
   expect(screen.getByText('New Collection')).toBeInTheDocument();
 });
@@ -77,22 +133,33 @@ test('open sidebar sets aria-expanded on menu button', () => {
 
 test('renders Environments sidebar tab', () => {
   renderApp();
-  fireEvent.click(screen.getByRole('button', { name: /open sidebar/i }));
+  openSidebar();
   expect(screen.getByRole('tab', { name: /environments/i })).toBeInTheDocument();
 });
 
-test('can open Environments tab and see seed environment', () => {
+test('shows empty environments state on first visit', () => {
   renderApp();
-  fireEvent.click(screen.getByRole('button', { name: /open sidebar/i }));
+  openSidebar();
+  fireEvent.click(screen.getByRole('tab', { name: /environments/i }));
+  expect(screen.getByText(/no environments yet/i)).toBeInTheDocument();
+});
+
+test('can open Environments tab and see seeded environment', () => {
+  seedMockAppData();
+  renderApp();
+  openSidebar();
   fireEvent.click(screen.getByRole('tab', { name: /environments/i }));
   expect(
     screen.getByRole('button', { name: /\+ environment/i })
   ).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Development'));
   expect(screen.getByText('Variables — Development')).toBeInTheDocument();
 });
 
-test('shows environment name in top bar', () => {
+test('shows environment name in top bar when request uses attached env', () => {
+  seedMockAppData();
   renderApp();
+  selectRequestByName('List users');
   const main = screen.getByRole('main');
   expect(within(main).getByText('Development')).toBeInTheDocument();
   expect(
@@ -101,7 +168,9 @@ test('shows environment name in top bar', () => {
 });
 
 test('renders environment variables in URL as highlighted tokens', () => {
+  seedMockAppData();
   renderApp();
+  selectRequestByName('List users');
   const urlField = screen.getByRole('textbox', { name: /request url/i });
   expect(urlField).toHaveValue('{{BASE_URL}}/users');
   expect(screen.getByText('{{BASE_URL}}')).toHaveClass('text-accent');
@@ -116,13 +185,22 @@ test('URL field is editable', () => {
   expect(urlField).toHaveValue('https://example.com/new-path');
 });
 
-test('Send button is enabled with valid URL', () => {
+test('Send button is disabled when URL is empty', () => {
   renderApp();
+  expect(screen.getByRole('button', { name: /^send$/i })).toBeDisabled();
+});
+
+test('Send button is enabled with valid URL', () => {
+  seedMockAppData();
+  renderApp();
+  selectRequestByName('List users');
   expect(screen.getByRole('button', { name: /^send$/i })).not.toBeDisabled();
 });
 
 test('can edit environment variables from top bar', () => {
+  seedMockAppData();
   renderApp();
+  selectRequestByName('List users');
   fireEvent.click(screen.getByRole('button', { name: /edit variables/i }));
   const envEditor = screen.getByLabelText('Development environment variables');
   expect(

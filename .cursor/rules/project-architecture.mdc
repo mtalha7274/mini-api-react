@@ -11,7 +11,8 @@ Read `IDEA.md` before adding features or changing domain boundaries.
 
 - UI components live under `src/components/<domain>/` (`layout`, `shared`, `request`, `collections`, `environment`, `response`, `history`).
 - Pages compose the shell in `src/pages/` (e.g. `Home.jsx`).
-- Mock/seed data belongs in `src/data/`.
+- Mock/seed data belongs in `src/data/` (tests and helpers only at runtime).
+- App persistence belongs in `src/storage/` (`appStorage.js` for collections/environments). Context providers hydrate on init and save via storage helpers.
 - Global state (Phase 2+) belongs in `src/context/<Name>/` — not in components.
 - HTTP execution belongs in `src/lib/http/` (one file per method); [`src/utils/requestExecutor.js`](src/utils/requestExecutor.js) is the UI facade.
 - Parsing/helpers belong in `src/utils/` (`envParser.js`, etc.).
