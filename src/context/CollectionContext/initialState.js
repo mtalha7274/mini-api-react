@@ -1,8 +1,5 @@
-import { mockCollections } from '../../data/mockData';
+import { loadCollections } from '../../storage/appStorage';
 
-export const initialCollectionState = {
-  collections: mockCollections.map((col) => ({
-    ...col,
-    requests: col.requests.map((req) => ({ ...req })),
-  })),
-};
+export function getInitialCollectionState() {
+  return loadCollections();
+}

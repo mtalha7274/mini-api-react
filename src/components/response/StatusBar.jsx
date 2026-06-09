@@ -17,7 +17,6 @@ export default function StatusBar({ status, statusText, duration }) {
         {status} {statusText}
       </span>
       <span className="text-muted">Time: {duration} ms</span>
-      <span className="text-muted text-xs">Phase 3: live execution</span>
     </div>
   );
 }

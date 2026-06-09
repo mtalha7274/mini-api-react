@@ -4,6 +4,7 @@ export const mockCollections = [
   {
     id: 'col-1',
     name: 'User API',
+    environmentId: 'env-dev',
     requests: [
       {
         id: 'req-1',
@@ -22,6 +23,7 @@ export const mockCollections = [
   {
     id: 'col-2',
     name: 'Auth',
+    environmentId: null,
     requests: [
       {
         id: 'req-3',
@@ -72,6 +74,14 @@ export const mockActiveRequest = {
     { key: 'limit', value: '10' },
   ],
   body: '{\n  "name": "Jane Doe",\n  "email": "jane@example.com"\n}',
+};
+
+export const emptyResponse = {
+  status: 0,
+  statusText: '—',
+  duration: 0,
+  headers: {},
+  body: '',
 };
 
 export const mockResponse = {
@@ -133,8 +143,6 @@ export const mockHistory = [
     },
   },
 ];
-
-export const defaultEnvironmentId = 'env-dev';
 
 export function createEmptyKeyValue() {
   return { key: '', value: '' };

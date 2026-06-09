@@ -36,4 +36,13 @@
   .select-control-env {
     padding-right: 2.25rem;
   }
+
+  .select-control-env-compact {
+    max-width: 6.5rem;
+    padding-left: 0.25rem;
+    padding-right: 1.375rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }

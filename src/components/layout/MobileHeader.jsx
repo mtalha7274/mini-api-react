@@ -1,4 +1,4 @@
-import { ThemeToggle } from '../shared';
+import { AppLogo, ThemeToggle } from '../shared';
 
 /**
  * @param {object} props
@@ -33,9 +33,7 @@ export default function MobileHeader({ sidebarOpen, onOpenSidebar }) {
         </svg>
       </button>
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-base font-semibold tracking-tight text-foreground">
-          Mini API
-        </h1>
+        <AppLogo size="sm" />
       </div>
       <ThemeToggle />
     </header>

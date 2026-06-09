@@ -63,10 +63,11 @@ Group requests into folders.
 |-------|------|-------------|
 | `id` | string | Unique collection id |
 | `name` | string | Display name |
+| `environmentId` | string \| null | Optional attached environment |
 | `requests` | RequestRef[] | Requests in this collection |
 
 ```ts
-Collection = { id, name, requests: RequestRef[] }
+Collection = { id, name, environmentId: string | null, requests: RequestRef[] }
 RequestRef = { id, name, method, url }
 ```
 
@@ -92,10 +93,11 @@ Main editor for HTTP requests.
 
 **Features:**
 
-- Create environments (Dev, Staging, Prod)
-- Add variables (key-value pairs)
-- Switch active environment
-- Use variables in requests like `{{BASE_URL}}`
+- Create, rename, delete environments (sidebar **Environments** tab)
+- Add variables (key-value pairs) per environment
+- Optionally attach an environment to each collection (dropdown on collection row)
+- Main editor shows the **resolved** environment for the active request’s collection (read-only)
+- Use variables in requests like `{{BASE_URL}}` (substitution in Phase 3 via resolved env)
 
 ### 4.4 Request Execution Engine
 
@@ -237,11 +239,12 @@ On Send:
 - CollectionItem
 - RequestItem
 
-### Environment Panel
+### Environment
 
-- EnvironmentSelector
-- VariablesEditor
-- EnvironmentPanel
+- EnvironmentList / EnvironmentListItem (sidebar tab)
+- VariablesEditor (sidebar editing)
+- EnvironmentPanel (read-only resolved env in main column)
+- EnvironmentSelector (legacy; unused in main flow)
 
 ### Response Viewer
 
@@ -270,8 +273,8 @@ On Send:
 | Phase | Scope | Status |
 |-------|--------|--------|
 | **1** | Folder structure, Tailwind UI, mock data, Cursor rules | Done |
-| **2** | CollectionContext + reducers (CRUD); RequestContext, HistoryContext | Partial |
-| **3** | `requestExecutor.js`, `envParser.js`, real Send + history writes | Planned |
+| **2** | CollectionContext + EnvironmentContext + reducers; RequestContext, HistoryContext | Partial |
+| **3** | `src/lib/http/` per-method execution, `requestExecutor` facade, Send + live response | Partial |
 | **4** | localStorage persistence, advanced enhancements | Planned |
 
 ### Theming (Phase 1)
@@ -285,7 +288,8 @@ On Send:
 ### Responsive layout
 
 - **Desktop (`lg+`, 1024px):** fixed 280px sidebar + editor/response column (unchanged)
-- **Mobile / tablet:** top bar with menu + theme toggle; sidebar as overlay drawer (`88vw` max); backdrop tap to close; closes on collection/history selection
+- **Mobile / tablet:** top bar with menu + theme toggle; sidebar as overlay drawer (`88vw` max); backdrop tap to close; closes on collection request selection
+- **Desktop (`lg+`):** draggable vertical handle between sidebar and editor; width persisted (`mini-api-sidebar-width`)
 - **Small (`sm`, 640px):** request bar stacks (method, URL, Send); key-value editors single-column
 - Viewport: `100dvh` on `#root` for mobile browser chrome
 
@@ -293,17 +297,36 @@ On Send:
 
 - [`src/context/CollectionContext/`](src/context/CollectionContext/) — `useCollection()`, `collectionReducer`
 - Sidebar: **+ Collection**, **+ Request**, inline rename, delete (confirm)
-- Editor syncs `method` / `url` to tree via `SYNC_REQUEST_REF` for active request
-- Full request body (headers, params, body) not yet stored per request — loaded from template on select
+- Per-collection environment attach dropdown (`SET_COLLECTION_ENVIRONMENT`)
+- **Empty bootstrap:** first visit has no collections/requests; sidebar shows empty state
+- **Persistence:** `localStorage` key `mini-api-collections`; provider hydrates on load, saves on change
+- **RequestRef:** `{ id, name, method, url, headers, params, body }` — editor syncs all fields via `SYNC_REQUEST_EDITOR` for active request
+
+### Environments (EnvironmentContext)
+
+- [`src/context/EnvironmentContext/`](src/context/EnvironmentContext/) — `useEnvironment()`, `environmentReducer`
+- Sidebar **Environments** tab: **+ Environment**, rename, delete, variables editor
+- **Empty bootstrap:** first visit has no environments; top environment bar hidden until a collection attaches one
+- **Persistence:** `localStorage` key `mini-api-environments`; provider hydrates on load, saves on change
+- Deleting an environment clears `environmentId` on attached collections (`CLEAR_ENVIRONMENT_REFERENCES`)
+- Send resolves variables from the active collection’s attached environment via `envParser` + `buildRequest`
+
+### Request execution (`src/lib/http/`)
+
+- One file per method: `get.js`, `post.js`, `put.js`, `patch.js`, `delete.js`
+- `buildRequest.js` — env substitution, query params, headers, body rules
+- `index.js` — `executeHttpRequest` router; errors return status `0` snapshot
+- [`src/utils/requestExecutor.js`](src/utils/requestExecutor.js) re-exports for UI (`Home.jsx` only)
+- Cross-origin requests require target server CORS; no proxy in-app
 
 ### Phase 1 acceptance
 
 - Three-region layout (sidebar | editor + response)
-- Collections / History sidebar tabs
+- Collections / Environments sidebar tabs (History tab deferred)
 - Request builder with method, URL, params, headers, body
-- Environment selector with variables (mock)
-- Response viewer with tabs (mock response)
-- No `fetch` in components
+- Environment management in sidebar; resolved env banner in main column
+- Response viewer with tabs (live response after Send)
+- No `fetch` in components (only `src/lib/http/`)
 
 ---
 
@@ -314,6 +337,7 @@ src/
   context/
     RequestContext/
     CollectionContext/
+    EnvironmentContext/
     HistoryContext/
   components/
     layout/
@@ -327,8 +351,15 @@ src/
     Home.jsx
   data/
     mockData.js
+  storage/
+    appStorage.js
+  lib/
+    http/
+      get.js, post.js, put.js, patch.js, delete.js
+      buildRequest.js, parseResponse.js, index.js
   utils/
     requestExecutor.js
+    envParser.js
     envParser.js
 ```
 
@@ -350,7 +381,7 @@ src/
 
 ## 10. Advanced Enhancements (Future)
 
-- Persist state to localStorage
+- Persist history, last response, UI tab state (collections/environments done — see `src/storage/appStorage.js`)
 - Request cloning
 - Middleware-style logging in reducers
 - Optimistic history updates

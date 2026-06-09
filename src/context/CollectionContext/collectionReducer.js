@@ -1,4 +1,10 @@
 import { generateId } from '../../utils/generateId';
+import { createEmptyKeyValue, cloneKeyValueRows } from '../../data/mockData';
+import {
+  DEFAULT_COLLECTION_AUTH,
+  DEFAULT_REQUEST_AUTH,
+  normalizeAuth,
+} from '../../utils/auth';
 
 export const CollectionActionTypes = {
   CREATE_COLLECTION: 'CREATE_COLLECTION',
@@ -7,8 +13,43 @@ export const CollectionActionTypes = {
   ADD_REQUEST_TO_COLLECTION: 'ADD_REQUEST_TO_COLLECTION',
   RENAME_REQUEST: 'RENAME_REQUEST',
   DELETE_REQUEST: 'DELETE_REQUEST',
-  SYNC_REQUEST_REF: 'SYNC_REQUEST_REF',
+  DUPLICATE_REQUEST: 'DUPLICATE_REQUEST',
+  SYNC_REQUEST_EDITOR: 'SYNC_REQUEST_EDITOR',
+  SET_COLLECTION_AUTH: 'SET_COLLECTION_AUTH',
+  SET_COLLECTION_ENVIRONMENT: 'SET_COLLECTION_ENVIRONMENT',
+  CLEAR_ENVIRONMENT_REFERENCES: 'CLEAR_ENVIRONMENT_REFERENCES',
 };
+
+function createEmptyRequest(id) {
+  return {
+    id,
+    name: 'New Request',
+    method: 'GET',
+    url: '',
+    headers: [createEmptyKeyValue()],
+    params: [createEmptyKeyValue()],
+    body: '',
+    auth: { ...DEFAULT_REQUEST_AUTH },
+  };
+}
+
+/**
+ * @param {{ id: string, name: string, method: string, url: string, headers: object[], params: object[], body: string }} source
+ */
+function cloneRequestFrom(source) {
+  const id = generateId('req');
+  const baseName = source.name.trim() || 'Request';
+  return {
+    id,
+    name: `${baseName} (copy)`,
+    method: source.method,
+    url: source.url,
+    headers: cloneKeyValueRows(source.headers),
+    params: cloneKeyValueRows(source.params),
+    body: source.body ?? '',
+    auth: normalizeAuth(source.auth, 'request'),
+  };
+}
 
 export function createCollection() {
   const id = generateId('col');
@@ -16,7 +57,13 @@ export function createCollection() {
     type: CollectionActionTypes.CREATE_COLLECTION,
     payload: {
       id,
-      collection: { id, name: 'New Collection', requests: [] },
+      collection: {
+        id,
+        name: 'New Collection',
+        environmentId: null,
+        auth: { ...DEFAULT_COLLECTION_AUTH },
+        requests: [],
+      },
     },
   };
 }
@@ -41,7 +88,7 @@ export function addRequestToCollection(collectionId) {
     type: CollectionActionTypes.ADD_REQUEST_TO_COLLECTION,
     payload: {
       collectionId,
-      request: { id, name: 'New Request', method: 'GET', url: '' },
+      request: createEmptyRequest(id),
     },
   };
 }
@@ -60,10 +107,61 @@ export function deleteRequest(collectionId, requestId) {
   };
 }
 
-export function syncRequestRef(requestId, method, url) {
+/**
+ * @param {string} collectionId
+ * @param {{ id: string, name: string, method: string, url: string, headers: object[], params: object[], body: string }} sourceRequest
+ */
+export function duplicateRequest(collectionId, sourceRequest) {
   return {
-    type: CollectionActionTypes.SYNC_REQUEST_REF,
-    payload: { requestId, method, url },
+    type: CollectionActionTypes.DUPLICATE_REQUEST,
+    payload: {
+      collectionId,
+      sourceRequestId: sourceRequest.id,
+      request: cloneRequestFrom(sourceRequest),
+    },
+  };
+}
+
+/**
+ * @param {string} requestId
+ * @param {{ method: string, url: string, headers: object[], params: object[], body: string, auth?: object }} editor
+ */
+export function syncRequestEditor(requestId, editor) {
+  return {
+    type: CollectionActionTypes.SYNC_REQUEST_EDITOR,
+    payload: {
+      requestId,
+      method: editor.method,
+      url: editor.url,
+      headers: cloneKeyValueRows(editor.headers),
+      params: cloneKeyValueRows(editor.params),
+      body: editor.body,
+      auth: normalizeAuth(editor.auth, 'request'),
+    },
+  };
+}
+
+export function setCollectionAuth(collectionId, auth) {
+  return {
+    type: CollectionActionTypes.SET_COLLECTION_AUTH,
+    payload: {
+      collectionId,
+      auth: normalizeAuth(auth, 'collection'),
+    },
+  };
+}
+
+export function setCollectionEnvironment(collectionId, environmentId) {
+  return {
+    type: CollectionActionTypes.SET_COLLECTION_ENVIRONMENT,
+    payload: { collectionId, environmentId },
+  };
+}
+
+export function clearEnvironmentReferences(environmentId) {
+  return {
+    type: CollectionActionTypes.CLEAR_ENVIRONMENT_REFERENCES,
+    payload: { environmentId },
   };
 }
 
@@ -140,16 +238,66 @@ export function collectionReducer(state, action) {
       };
     }
 
-    case CollectionActionTypes.SYNC_REQUEST_REF: {
-      const { requestId, method, url } = action.payload;
+    case CollectionActionTypes.DUPLICATE_REQUEST: {
+      const { collectionId, sourceRequestId, request } = action.payload;
+      return {
+        ...state,
+        collections: state.collections.map((col) => {
+          if (col.id !== collectionId) return col;
+          const index = col.requests.findIndex((r) => r.id === sourceRequestId);
+          if (index === -1) return col;
+          const requests = [...col.requests];
+          requests.splice(index + 1, 0, request);
+          return { ...col, requests };
+        }),
+      };
+    }
+
+    case CollectionActionTypes.SYNC_REQUEST_EDITOR: {
+      const { requestId, method, url, headers, params, body, auth } =
+        action.payload;
       return {
         ...state,
         collections: state.collections.map((col) => ({
           ...col,
           requests: col.requests.map((req) =>
-            req.id === requestId ? { ...req, method, url } : req
+            req.id === requestId
+              ? { ...req, method, url, headers, params, body, auth }
+              : req
           ),
         })),
+      };
+    }
+
+    case CollectionActionTypes.SET_COLLECTION_AUTH: {
+      const { collectionId, auth } = action.payload;
+      return {
+        ...state,
+        collections: state.collections.map((col) =>
+          col.id === collectionId ? { ...col, auth } : col
+        ),
+      };
+    }
+
+    case CollectionActionTypes.SET_COLLECTION_ENVIRONMENT: {
+      const { collectionId, environmentId } = action.payload;
+      return {
+        ...state,
+        collections: state.collections.map((col) =>
+          col.id === collectionId ? { ...col, environmentId } : col
+        ),
+      };
+    }
+
+    case CollectionActionTypes.CLEAR_ENVIRONMENT_REFERENCES: {
+      const { environmentId } = action.payload;
+      return {
+        ...state,
+        collections: state.collections.map((col) =>
+          col.environmentId === environmentId
+            ? { ...col, environmentId: null }
+            : col
+        ),
       };
     }
 

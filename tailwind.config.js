@@ -11,6 +11,7 @@ module.exports = {
         foreground: 'var(--color-foreground)',
         muted: 'var(--color-muted)',
         border: 'var(--color-border)',
+        'gutter-divider': 'var(--color-gutter-divider)',
         accent: {
           DEFAULT: 'var(--color-accent)',
           hover: 'var(--color-accent-hover)',
@@ -18,9 +19,23 @@ module.exports = {
         input: 'var(--color-input)',
         ring: 'var(--color-ring)',
         syntax: 'var(--color-syntax-string)',
+        json: {
+          key: 'var(--color-json-key)',
+          string: 'var(--color-json-string)',
+          number: 'var(--color-json-number)',
+          boolean: 'var(--color-json-boolean)',
+          null: 'var(--color-json-null)',
+          punctuation: 'var(--color-json-punctuation)',
+        },
         success: 'var(--color-success)',
         warning: 'var(--color-warning)',
         danger: 'var(--color-danger)',
+        env: {
+          DEFAULT: 'var(--color-env)',
+          hover: 'var(--color-env-hover)',
+          muted: 'var(--color-env-muted)',
+          border: 'var(--color-env-border)',
+        },
         method: {
           get: 'var(--color-method-get)',
           post: 'var(--color-method-post)',
