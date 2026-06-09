@@ -26,7 +26,6 @@ import {
   environmentReducer,
 } from '../context/EnvironmentContext/environmentReducer';
 import {
-  emptyResponse,
   cloneKeyValueRows,
   createEmptyKeyValue,
 } from '../data/mockData';
@@ -38,6 +37,12 @@ import {
 import { variablesArrayToMap } from '../utils/envParser';
 import { DEFAULT_REQUEST_AUTH, normalizeAuth } from '../utils/auth';
 import { executeRequest } from '../utils/requestExecutor';
+import {
+  getResponseForRequest,
+  setResponseForRequest,
+  removeResponseForRequest,
+  removeResponsesForRequestIds,
+} from '../utils/responseCache';
 
 const emptyEditorState = {
   method: 'GET',
@@ -77,8 +82,13 @@ export default function Home() {
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState(null);
 
   const [request, setRequest] = useState(() => ({ ...emptyEditorState }));
-  const [response, setResponse] = useState(emptyResponse);
+  const [responsesByRequestId, setResponsesByRequestId] = useState({});
   const [isSending, setIsSending] = useState(false);
+
+  const response = useMemo(
+    () => getResponseForRequest(responsesByRequestId, activeRequestId),
+    [responsesByRequestId, activeRequestId]
+  );
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
@@ -196,6 +206,12 @@ export default function Home() {
       if (activeCollectionId === collectionId) {
         setActiveCollectionId(null);
       }
+      setResponsesByRequestId((prev) =>
+        removeResponsesForRequestIds(
+          prev,
+          col.requests.map((r) => r.id)
+        )
+      );
       if (
         activeRequestId &&
         col.requests.some((r) => r.id === activeRequestId)
@@ -270,6 +286,9 @@ export default function Home() {
         deleteAction
       ).collections;
       collectionDispatch(deleteAction);
+      setResponsesByRequestId((prev) =>
+        removeResponseForRequest(prev, requestId)
+      );
       if (activeRequestId === requestId) {
         const nextId = getFirstRequestId(nextCollections);
         if (nextId) {
@@ -353,7 +372,8 @@ export default function Home() {
   }, [activeRequestId, activeCollectionId, activeCollection]);
 
   const handleSend = useCallback(async () => {
-    if (isSending) return;
+    const requestId = activeRequestId;
+    if (!requestId || isSending) return;
     if (
       bodyRequiresJsonValidation(request.method, request.body) &&
       getJsonValidationError(request.body)
@@ -374,11 +394,19 @@ export default function Home() {
         requestAuth: request.auth,
         envVariableMap,
       });
-      setResponse(result);
+      setResponsesByRequestId((prev) =>
+        setResponseForRequest(prev, requestId, result)
+      );
     } finally {
       setIsSending(false);
     }
-  }, [request, envVariableMap, isSending, activeCollectionContext]);
+  }, [
+    activeRequestId,
+    request,
+    envVariableMap,
+    isSending,
+    activeCollectionContext,
+  ]);
 
   const handleVariablesChange = useCallback(
     (environmentId, variables) => {
