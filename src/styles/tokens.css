@@ -1,0 +1,83 @@
+:root {
+  /* Soft light — warm gray canvas, no stark white */
+  --color-background: #dfe1e6;
+  --color-surface: #ecedf1;
+  --color-surface-muted: #e4e5ea;
+  --color-foreground: #2c2c30;
+  --color-muted: #5c5c66;
+  --color-border: #b8bac4;
+  --color-gutter-divider: rgba(44, 44, 48, 0.09);
+  --color-accent: #e85d04;
+  --color-accent-hover: #c2410c;
+  --color-input: #f2f3f6;
+  --color-ring: rgba(232, 93, 4, 0.4);
+  --color-syntax-string: #047857;
+  --color-json-key: #1d4ed8;
+  --color-json-string: #047857;
+  --color-json-number: #c2410c;
+  --color-json-boolean: #7c3aed;
+  --color-json-null: #7c3aed;
+  --color-json-punctuation: #5c5c66;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
+  --color-env: #4f46e5;
+  --color-env-hover: #4338ca;
+  --color-env-muted: rgba(79, 70, 229, 0.1);
+  --color-env-border: rgba(79, 70, 229, 0.28);
+  --shadow-sm: 0 1px 2px 0 rgba(44, 44, 48, 0.06), 0 2px 6px -1px rgba(44, 44, 48, 0.08);
+
+  /* Vivid method badges — strong contrast on soft light UI */
+  --color-method-get: #16a34a;
+  --color-method-post: #d97706;
+  --color-method-put: #2563eb;
+  --color-method-patch: #9333ea;
+  --color-method-delete: #dc2626;
+
+  --color-method-dot-get: #22c55e;
+  --color-method-dot-post: #eab308;
+  --color-method-dot-put: #3b82f6;
+  --color-method-dot-patch: #a855f7;
+  --color-method-dot-delete: #ef4444;
+}
+
+.dark {
+  --color-background: #1a1a1c;
+  --color-surface: #242428;
+  --color-surface-muted: #2e2e32;
+  --color-foreground: #ececee;
+  --color-muted: #9b9ba3;
+  --color-border: #3a3a40;
+  --color-gutter-divider: rgba(236, 236, 238, 0.07);
+  --color-accent: #f97316;
+  --color-accent-hover: #fb923c;
+  --color-input: #2e2e32;
+  --color-ring: rgba(249, 115, 22, 0.45);
+  --color-syntax-string: #6ee7b7;
+  --color-json-key: #93c5fd;
+  --color-json-string: #6ee7b7;
+  --color-json-number: #fb923c;
+  --color-json-boolean: #d8b4fe;
+  --color-json-null: #d8b4fe;
+  --color-json-punctuation: #9b9ba3;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-env: #a5b4fc;
+  --color-env-hover: #c7d2fe;
+  --color-env-muted: rgba(129, 140, 248, 0.14);
+  --color-env-border: rgba(165, 180, 252, 0.35);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+
+  --color-method-get: #22c55e;
+  --color-method-post: #f59e0b;
+  --color-method-put: #60a5fa;
+  --color-method-patch: #c084fc;
+  --color-method-delete: #f87171;
+
+  --color-method-dot-get: #4ade80;
+  --color-method-dot-post: #fbbf24;
+  --color-method-dot-put: #93c5fd;
+  --color-method-dot-patch: #d8b4fe;
+  --color-method-dot-delete: #fca5a5;
+}
